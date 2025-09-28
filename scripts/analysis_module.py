@@ -20,7 +20,7 @@ def analyze_ticker(ticker: str, metrics: list):
     info = stock.info or {}
     company_name = info.get("longName") or info.get("shortName") or ticker
 
-    # --- Companies table ---
+    # Companies table
     company_payload = {
         "company_name": company_name,
         "ticker": ticker,
@@ -30,14 +30,14 @@ def analyze_ticker(ticker: str, metrics: list):
         "currency": info.get("currency"),
     }
     company_id = upsert_record("companies", "ticker", ticker, company_payload)
+
     results = {"company_id": company_id, "company_name": company_name}
 
-    # --- Valuation ---
+    # Optional metrics
     if "valuation" in metrics:
         val = {
             "company_id": company_id,
             "market_cap": info.get("marketCap"),
-            "enterprise_value": info.get("enterpriseValue"),
             "trailing_pe": info.get("trailingPE"),
             "forward_pe": info.get("forwardPE"),
             "peg_ratio": info.get("pegRatio"),
@@ -46,7 +46,6 @@ def analyze_ticker(ticker: str, metrics: list):
         upsert_record("valuation", "uniquekey", val["uniquekey"], val)
         results["valuation"] = val
 
-    # --- Profitability ---
     if "profitability" in metrics:
         prof = {
             "company_id": company_id,
@@ -58,7 +57,6 @@ def analyze_ticker(ticker: str, metrics: list):
         upsert_record("profitability", "uniquekey", prof["uniquekey"], prof)
         results["profitability"] = prof
 
-    # --- Growth ---
     if "growth" in metrics:
         growth = {
             "company_id": company_id,
@@ -71,7 +69,6 @@ def analyze_ticker(ticker: str, metrics: list):
         upsert_record("growth", "uniquekey", growth["uniquekey"], growth)
         results["growth"] = growth
 
-    # --- Balance ---
     if "balance" in metrics:
         balance = {
             "company_id": company_id,
@@ -84,7 +81,6 @@ def analyze_ticker(ticker: str, metrics: list):
         upsert_record("balance", "uniquekey", balance["uniquekey"], balance)
         results["balance"] = balance
 
-    # --- Cashflow ---
     if "cashflow" in metrics:
         cashflow = {
             "company_id": company_id,
@@ -97,7 +93,6 @@ def analyze_ticker(ticker: str, metrics: list):
         upsert_record("cashflow", "uniquekey", cashflow["uniquekey"], cashflow)
         results["cashflow"] = cashflow
 
-    # --- Dividends ---
     if "dividends" in metrics:
         dividends = {
             "company_id": company_id,
@@ -109,14 +104,13 @@ def analyze_ticker(ticker: str, metrics: list):
         upsert_record("dividends", "uniquekey", dividends["uniquekey"], dividends)
         results["dividends"] = dividends
 
-    # --- Recommendations ---
+    # Recommendations
     if "recommendations" in metrics:
-        recs_data = []
         try:
             recs = stock.recommendations_summary
         except Exception:
             recs = None
-
+        rec_list = []
         if recs is not None and not recs.empty:
             for period, row in recs.iterrows():
                 rec_record = {
@@ -130,7 +124,7 @@ def analyze_ticker(ticker: str, metrics: list):
                     "uniquekey": f"{ticker}_{period}",
                 }
                 upsert_record("recommendations", "uniquekey", rec_record["uniquekey"], rec_record)
-                recs_data.append(rec_record)
-        results["recommendations"] = recs_data
+                rec_list.append(rec_record)
+        results["recommendations"] = rec_list
 
     return results
