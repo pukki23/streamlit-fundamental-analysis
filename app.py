@@ -1,21 +1,18 @@
 import streamlit as st
 import pandas as pd
 from supabase_client import supabase
-from scripts.supabase_analysis import analyze_ticker  # Modular analysis script
-from scripts.euro_news import push_news_to_supabase, fetch_news_with_fallback
-from scripts.euro_filings import push_filings, fetch_filings_from_google_news
+from scripts.supabase_analysis import analyze_ticker
+from scripts.euro_news import push_news
+from scripts.euro_filings import push_filings
+from datetime import datetime, timezone
 
 # --- Page setup ---
 st.set_page_config(page_title="📊 Fundamental Analysis Dashboard", layout="wide")
 st.title("📊 Fundamental Analysis Dashboard")
 
-# --- Fetch all tickers and companies for dropdowns ---
-@st.cache_data(ttl=3600)
-def get_companies():
-    companies_data = supabase.table("companies").select("ticker, company_name").execute()
-    return pd.DataFrame(companies_data.data or [])
-
-companies_df = get_companies()
+# --- Fetch tickers & companies ---
+companies_data = supabase.table("companies").select("ticker, company_name").execute()
+companies_df = pd.DataFrame(companies_data.data or [])
 tickers = sorted(companies_df['ticker'].tolist()) if not companies_df.empty else []
 company_names = sorted(companies_df['company_name'].tolist()) if not companies_df.empty else []
 
@@ -32,62 +29,57 @@ selected_metrics = st.sidebar.multiselect(
     "Select Metrics to Display", options=metrics_options, default=metrics_options
 )
 
-# --- Cache ticker analysis to reduce repeated API calls ---
-@st.cache_data(ttl=1800, show_spinner=False)
-def get_analysis(ticker, metrics):
+# --- Cached data ---
+@st.cache_data(ttl=8*60*60)  # 8 hours
+def get_fundamentals(ticker, metrics):
     return analyze_ticker(ticker, metrics)
 
-# --- Cache news to reduce repeated API calls ---
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=60*60)  # 1 hour
 def get_news(ticker, company_name):
-    return fetch_news_with_fallback(ticker, company_name)
+    return push_news(ticker, company_name)
 
-# --- Cache filings ---
-@st.cache_data(ttl=1800, show_spinner=False)
+@st.cache_data(ttl=7*24*60*60)  # 1 week
 def get_filings(ticker, company_name):
-    return fetch_filings_from_google_news(company_name)
+    return push_filings(ticker, company_name)
 
-# --- Fetch & Analyze button ---
+# --- Fetch & display ---
 if st.sidebar.button("Fetch & Analyze"):
     if not ticker_choice or not company_choice:
         st.warning("Please select both ticker and company.")
     else:
-        with st.spinner(f"Fetching data for {ticker_choice}..."):
-            analysis_results = get_analysis(ticker_choice, selected_metrics)
-            news_results = get_news(ticker_choice, company_choice)
-            filings_results = get_filings(ticker_choice, company_choice)
+        with st.spinner("Fetching fundamentals..."):
+            fundamentals = get_fundamentals(ticker_choice, selected_metrics)
+        with st.spinner("Fetching news..."):
+            news_items = get_news(ticker_choice, company_choice)
+        with st.spinner("Fetching filings..."):
+            filings_items = get_filings(ticker_choice, company_choice)
 
         st.success(f"✅ Data fetched for {ticker_choice} ({company_choice})")
 
-        # --- Display metrics in tabs ---
-        metric_tabs = st.tabs(selected_metrics + ["News", "Filings"])
+        # --- Metrics tabs ---
+        tabs = st.tabs(selected_metrics + ["News", "Filings"])
         for idx, metric in enumerate(selected_metrics):
-            with metric_tabs[idx]:
-                data = analysis_results.get(metric)
+            with tabs[idx]:
+                data = fundamentals.get(metric)
                 if data:
-                    if isinstance(data, list):  # e.g., recommendations
-                        st.dataframe(pd.DataFrame(data))
-                    else:
-                        st.json(data)
+                    st.json(data)
                 else:
-                    st.info(f"No data available for {metric}")
+                    st.info(f"No data for {metric}")
 
         # --- News tab ---
-        with metric_tabs[len(selected_metrics)]:
-            if news_results:
-                st.subheader("📰 Recent News")
-                st.dataframe(pd.DataFrame(news_results))
+        with tabs[len(selected_metrics)]:
+            if news_items:
+                st.dataframe(pd.DataFrame(news_items))
             else:
-                st.info("No recent news found.")
+                st.info("No news available")
 
         # --- Filings tab ---
-        with metric_tabs[len(selected_metrics) + 1]:
-            if filings_results:
-                st.subheader("📄 Recent Filings")
-                st.dataframe(pd.DataFrame(filings_results))
+        with tabs[len(selected_metrics)+1]:
+            if filings_items:
+                st.dataframe(pd.DataFrame(filings_items))
             else:
-                st.info("No recent filings found.")
+                st.info("No filings available")
 
-# --- Optional: show company table ---
+# --- Optional: Show all companies ---
 if st.checkbox("Show All Companies"):
     st.dataframe(companies_df)
