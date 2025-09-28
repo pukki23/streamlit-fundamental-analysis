@@ -1,67 +1,93 @@
 import streamlit as st
-from supabase import create_client, Client
 import pandas as pd
+from supabase_client import supabase
+from scripts.supabase_analysis import analyze_ticker  # Modular analysis script
+from scripts.euro_news import push_news_to_supabase, fetch_news_with_fallback
+from scripts.euro_filings import push_filings, fetch_filings_from_google_news
 
-# --- Load Supabase credentials from Streamlit Secrets ---
-SUPABASE_URL = st.secrets["SUPABASE_URL"]
-SUPABASE_KEY = st.secrets["SUPABASE_KEY"]
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    st.error("❌ Missing Supabase credentials in Streamlit Secrets")
-    st.stop()
-
-# --- Initialize Supabase client ---
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# --- UI Config ---
+# --- Page setup ---
 st.set_page_config(page_title="📊 Fundamental Analysis Dashboard", layout="wide")
 st.title("📊 Fundamental Analysis Dashboard")
 
+# --- Fetch all tickers and companies for dropdowns ---
+@st.cache_data(ttl=3600)
+def get_companies():
+    companies_data = supabase.table("companies").select("ticker, company_name").execute()
+    return pd.DataFrame(companies_data.data or [])
+
+companies_df = get_companies()
+tickers = sorted(companies_df['ticker'].tolist()) if not companies_df.empty else []
+company_names = sorted(companies_df['company_name'].tolist()) if not companies_df.empty else []
+
 # --- Sidebar filters ---
 st.sidebar.header("⚙️ Filters")
-ticker_filter = st.sidebar.text_input("Company Ticker (optional)", "")
+ticker_choice = st.sidebar.selectbox("Select a Company Ticker", options=tickers)
+company_choice = st.sidebar.selectbox("Select Company Name", options=company_names)
 
-# --- Supabase tables ---
-tables = [
-    "companies",
-    "valuation",
-    "profitability",
-    "growth",
-    "balance",
-    "cashflow",
-    "dividends",
-    "recommendations",
-    "fundamentals_history",
-    "filings",
-    "filings_history",
-    "news",
-    "news_history",
+metrics_options = [
+    "valuation", "profitability", "growth", "balance", 
+    "cashflow", "dividends", "recommendations"
 ]
+selected_metrics = st.sidebar.multiselect(
+    "Select Metrics to Display", options=metrics_options, default=metrics_options
+)
 
-# --- Create tabs for each table ---
-tabs = st.tabs(tables)
+# --- Cache ticker analysis to reduce repeated API calls ---
+@st.cache_data(ttl=1800, show_spinner=False)
+def get_analysis(ticker, metrics):
+    return analyze_ticker(ticker, metrics)
 
-for tab_name, tab in zip(tables, tabs):
-    with tab:
-        st.header(f"📋 {tab_name.replace('_',' ').title()} Table")
-        
-        # Fetch data with optional ticker filter
-        query = supabase.table(tab_name).select("*")
-        # Only apply ticker filter if column exists
-        if ticker_filter:
-            try:
-                # Test if 'ticker' column exists by checking first row
-                test_data = query.limit(1).execute()
-                if test_data.data and "ticker" in test_data.data[0]:
-                    query = query.eq("ticker", ticker_filter)
-            except:
-                pass
-        
-        response = query.execute()
-        
-        if response.data:
-            df = pd.DataFrame(response.data)
-            st.success(f"✅ Found {len(df)} records in {tab_name}")
-            st.dataframe(df)
-        else:
-            st.warning(f"⚠️ No data found in {tab_name}")
+# --- Cache news to reduce repeated API calls ---
+@st.cache_data(ttl=1800, show_spinner=False)
+def get_news(ticker, company_name):
+    return fetch_news_with_fallback(ticker, company_name)
+
+# --- Cache filings ---
+@st.cache_data(ttl=1800, show_spinner=False)
+def get_filings(ticker, company_name):
+    return fetch_filings_from_google_news(company_name)
+
+# --- Fetch & Analyze button ---
+if st.sidebar.button("Fetch & Analyze"):
+    if not ticker_choice or not company_choice:
+        st.warning("Please select both ticker and company.")
+    else:
+        with st.spinner(f"Fetching data for {ticker_choice}..."):
+            analysis_results = get_analysis(ticker_choice, selected_metrics)
+            news_results = get_news(ticker_choice, company_choice)
+            filings_results = get_filings(ticker_choice, company_choice)
+
+        st.success(f"✅ Data fetched for {ticker_choice} ({company_choice})")
+
+        # --- Display metrics in tabs ---
+        metric_tabs = st.tabs(selected_metrics + ["News", "Filings"])
+        for idx, metric in enumerate(selected_metrics):
+            with metric_tabs[idx]:
+                data = analysis_results.get(metric)
+                if data:
+                    if isinstance(data, list):  # e.g., recommendations
+                        st.dataframe(pd.DataFrame(data))
+                    else:
+                        st.json(data)
+                else:
+                    st.info(f"No data available for {metric}")
+
+        # --- News tab ---
+        with metric_tabs[len(selected_metrics)]:
+            if news_results:
+                st.subheader("📰 Recent News")
+                st.dataframe(pd.DataFrame(news_results))
+            else:
+                st.info("No recent news found.")
+
+        # --- Filings tab ---
+        with metric_tabs[len(selected_metrics) + 1]:
+            if filings_results:
+                st.subheader("📄 Recent Filings")
+                st.dataframe(pd.DataFrame(filings_results))
+            else:
+                st.info("No recent filings found.")
+
+# --- Optional: show company table ---
+if st.checkbox("Show All Companies"):
+    st.dataframe(companies_df)
