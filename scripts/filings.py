@@ -5,19 +5,6 @@ from dotenv import load_dotenv
 import streamlit as st
 
 # ======================================
-# 🔧 Load environment variables
-# ======================================
-load_dotenv()
-SUPABASE_URL = os.getenv("SUPABASE_URL")
-SUPABASE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY") or os.getenv("SUPABASE_KEY")
-
-if not SUPABASE_URL or not SUPABASE_KEY:
-    st.error("❌ Missing Supabase credentials. Please set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.")
-    st.stop()
-
-supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-
-# ======================================
 # 📥 Fetch or simulate filings
 # ======================================
 def fetch_upcoming_filings():
