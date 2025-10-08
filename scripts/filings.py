@@ -1,115 +1,73 @@
-import os
-from datetime import datetime, timedelta, timezone
-from supabase import create_client, Client
-from dotenv import load_dotenv
-import streamlit as st
+import datetime
+from supabase_client import supabase
+from scripts.scraper import find_and_extract_latest_filing
 
-# ======================================
-# 📥 Fetch or simulate filings
-# ======================================
-def fetch_upcoming_filings():
-    """
-    Simulated function — replace later with your live classification pipeline.
-    """
-    return [
-        {
-            "ticker": "AAPL",
-            "company_name": "Apple Inc.",
-            "event_type": "filing",
-            "expected_date": (datetime.now(timezone.utc) + timedelta(days=10)).isoformat(),
-            "filing_url": "https://investor.apple.com/news",
-            "filing_title": "Apple Announces Q4 2025 Earnings Date",
-            "filing_summary": "Apple will report Q4 results on November 16, 2025.",
-            "filing_text": "",
-            "classification_label": "financial",
-            "classification_score": 0.98,
-            "fetched_from": "google_news",
-            "notes": "Initial pipeline entry."
-        },
-        {
-            "ticker": "MSFT",
-            "company_name": "Microsoft Corp.",
-            "event_type": "filing",
-            "expected_date": (datetime.now(timezone.utc) + timedelta(days=5)).isoformat(),
-            "filing_url": "https://www.microsoft.com/investor",
-            "filing_title": "Microsoft Earnings Call Scheduled for Oct 11",
-            "filing_summary": "Microsoft will hold its quarterly call on Oct 11, 2025.",
-            "filing_text": "",
-            "classification_label": "financial",
-            "classification_score": 0.95,
-            "fetched_from": "company_site",
-            "notes": "Initial pipeline entry."
-        }
-    ]
 
-# ======================================
-# 📤 Push filings to Supabase
-# ======================================
-def push_to_filings_history(entries):
-    try:
-        for entry in entries:
-            supabase.table("filings_history").insert(entry).execute()
-        print("✅ Filings successfully pushed to Supabase.")
-    except Exception as e:
-        print("❌ Error pushing filings to Supabase:", e)
+def save_or_update_filing(ticker, company_name, next_date, source="manual"):
+    """Insert or update a filing record in the 'filings' table."""
+    record = {
+        "company_name": company_name,
+        "ticker": ticker,
+        "next_earnings_date": next_date,
+        "pending_filing": True,
+        "last_checked": datetime.datetime.utcnow().isoformat(),
+        "filing_source": source,
+    }
 
-# ======================================
-# 🔍 Check for due filings
-# ======================================
-def check_due_filings():
-    """Check if today matches any filing date."""
-    today = datetime.now(timezone.utc).date()
-    try:
-        res = supabase.table("filings_history").select("*").execute()
-        due_today = [f for f in res.data if datetime.fromisoformat(f["expected_date"]).date() == today]
-        return due_today
-    except Exception as e:
-        print("⚠️ Could not check due filings:", e)
-        return []
+    existing = supabase.table("filings").select("*").eq("ticker", ticker).execute().data
+    if existing:
+        supabase.table("filings").update(record).eq("ticker", ticker).execute()
+        return "updated"
+    else:
+        supabase.table("filings").insert(record).execute()
+        return "inserted"
 
-# ======================================
-# 🖥️ Streamlit Dashboard
-# ======================================
-st.set_page_config(page_title="Filings Dashboard", page_icon="📊", layout="wide")
 
-st.title("📅 Upcoming Financial Filings Dashboard")
+def archive_filing_to_history(filing, filing_data=None):
+    """Move a filing record to history, optionally including scraped data."""
+    entry = {
+        "ticker": filing["ticker"],
+        "company_name": filing["company_name"],
+        "event_type": "earning",
+        "expected_date": filing["next_earnings_date"],
+        "fetched_from": filing.get("filing_source", "unknown"),
+        "notes": "Auto-archived after release",
+    }
 
-# -- Section 1: Upcoming filings
-st.header("🕓 Upcoming Filings")
+    if filing_data:
+        entry.update({
+            "filing_url": filing_data.get("filing_url"),
+            "filing_title": filing_data.get("filing_title"),
+            "filing_summary": filing_data.get("filing_summary"),
+            "filing_text": filing_data.get("filing_text"),
+        })
 
-try:
-    filings = supabase.table("filings_history").select("*").order("expected_date", desc=False).execute()
-    filings_data = filings.data or []
-except Exception as e:
-    st.error(f"❌ Error loading filings: {e}")
-    filings_data = []
+    supabase.table("filings_history").insert(entry).execute()
+    supabase.table("filings").delete().eq("ticker", filing["ticker"]).execute()
 
-if not filings_data:
-    st.info("No upcoming filings yet. Run the pipeline to add some.")
-else:
-    for f in filings_data:
-        st.subheader(f"{f['company_name']} ({f['ticker']})")
-        st.write(f"**Type:** {f.get('event_type', '-')}")
-        st.write(f"**Expected Date:** {f.get('expected_date', '-')}")
-        st.write(f"**Source:** {f.get('fetched_from', '-')}")
-        st.write(f"**Title:** {f.get('filing_title', '-')}")
-        st.write(f"**Summary:** {f.get('filing_summary', '-')}")
-        st.markdown(f"[View Source]({f.get('filing_url', '#')})")
-        st.divider()
 
-# -- Section 2: Due today alerts
-due_today = check_due_filings()
-if due_today:
-    st.header("🚨 Filings Due Today")
-    for d in due_today:
-        st.warning(f"**{d['company_name']} ({d['ticker']})** — Filing expected today!")
-else:
-    st.header("✅ No filings due today.")
+def process_expired_or_due_filings():
+    """Detect filings that are due today or past due and scrape their data."""
+    now = datetime.datetime.utcnow()
+    due_filings = (
+        supabase.table("filings")
+        .select("*")
+        .lte("next_earnings_date", now.isoformat())
+        .execute()
+        .data or []
+    )
 
-# ======================================
-# 🧩 Developer/Local Mode
-# ======================================
-if st.button("🧠 Run Once & Push Sample Filings"):
-    new_entries = fetch_upcoming_filings()
-    push_to_filings_history(new_entries)
-    st.success("✅ Sample filings added to Supabase. Refresh to see updates.")
+    processed = 0
+    for filing in due_filings:
+        filing_data = find_and_extract_latest_filing(filing["company_name"])
+        archive_filing_to_history(filing, filing_data)
+        processed += 1
+
+    return processed
+
+
+def get_next_filing():
+    """Return the next upcoming filing."""
+    response = supabase.table("filings").select("*").order("next_earnings_date", desc=False).limit(1).execute()
+    data = response.data
+    return data[0] if data else None
