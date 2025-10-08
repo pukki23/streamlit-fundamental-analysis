@@ -1,9 +1,9 @@
 import streamlit as st
 import pandas as pd
 from supabase_client import supabase
-from scripts.supabase_analysis import analyze_ticker
-from scripts.euro_news import push_news
-from scripts.euro_filings import push_filings
+from scripts.analysis_module import analyze_ticker
+from scripts.euronews_module import push_news
+from scripts.euro_filings_module import push_filings
 from datetime import datetime, timezone
 
 # --- Page setup ---
