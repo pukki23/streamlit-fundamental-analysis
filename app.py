@@ -7,7 +7,7 @@ from supabase_client import supabase
 from scripts.analysis_module import analyze_ticker
 from scripts.euronews_module import push_news
 from scripts.euro_filings_module import push_filings
-from scripts.filings_manager import (
+from scripts.filings import (
     save_or_update_filing,
     process_expired_or_due_filings,
     get_next_filing
