@@ -4,3 +4,7 @@ pandas
 numpy
 dotenv
 yfinance
+python-dotenv
+feedparser
+newspaper3k
+trafilatura
