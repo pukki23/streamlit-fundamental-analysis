@@ -12,7 +12,7 @@ from scripts.filings import (
     get_next_filing,
 )
 # Import scraper
-from scraper import find_and_extract_latest_filing
+from script.scraper import find_and_extract_latest_filing
 
 # --- Page setup ---
 st.set_page_config(page_title="📊 Fundamental & Filings Dashboard", layout="wide")
