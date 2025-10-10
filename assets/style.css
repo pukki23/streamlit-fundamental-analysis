@@ -1,0 +1,101 @@
+/* === Global Page Styling === */
+body {
+    background-color: #f7f9fb;
+    font-family: 'Inter', 'Segoe UI', sans-serif;
+    color: #222;
+}
+
+/* Streamlit default container cleanup */
+.block-container {
+    padding-top: 2rem !important;
+    padding-bottom: 2rem !important;
+}
+
+/* === Titles & Headers === */
+h1, h2, h3, h4 {
+    color: #003566 !important;
+    font-weight: 600 !important;
+}
+
+h1 {
+    font-size: 2.2rem !important;
+}
+h2 {
+    font-size: 1.6rem !important;
+    border-bottom: 2px solid #0077b6;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+}
+
+/* === Buttons === */
+button[kind="primary"] {
+    background: linear-gradient(90deg, #0077b6, #0096c7);
+    color: white !important;
+    border-radius: 8px !important;
+    padding: 0.5rem 1rem !important;
+    font-weight: 600;
+}
+
+button[kind="primary"]:hover {
+    background: linear-gradient(90deg, #0096c7, #00b4d8);
+}
+
+/* === DataFrames & Tables === */
+.stDataFrame {
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+thead tr th {
+    background-color: #0077b6 !important;
+    color: white !important;
+}
+
+/* === Card Component Style (for filings/news) === */
+.filing-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+    padding: 1.2rem;
+    margin-bottom: 1rem;
+    transition: transform 0.1s ease-in-out;
+}
+
+.filing-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+}
+
+.filing-title {
+    font-size: 1.1rem;
+    color: #005f73;
+    font-weight: 600;
+}
+
+.filing-meta {
+    font-size: 0.9rem;
+    color: #6c757d;
+}
+
+/* === Sidebar === */
+section[data-testid="stSidebar"] {
+    background-color: #001d3d !important;
+}
+
+section[data-testid="stSidebar"] * {
+    color: #f8f9fa !important;
+}
+
+section[data-testid="stSidebar"] .stSelectbox label {
+    color: #dee2e6 !important;
+}
+
+/* === Links === */
+a {
+    color: #0077b6 !important;
+    text-decoration: none;
+}
+a:hover {
+    text-decoration: underline;
+}
