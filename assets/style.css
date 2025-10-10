@@ -1,101 +1,105 @@
-/* === Global Page Styling === */
+/* === Global Light Theme === */
 body {
-    background-color: #f7f9fb;
-    font-family: 'Inter', 'Segoe UI', sans-serif;
-    color: #222;
+    background-color: #f9fafc;
+    color: #1f2937;
+    font-family: 'Inter', sans-serif;
 }
 
-/* Streamlit default container cleanup */
-.block-container {
-    padding-top: 2rem !important;
-    padding-bottom: 2rem !important;
+.main-title {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: #1e3a8a;
+    margin-bottom: 0.5rem;
 }
 
-/* === Titles & Headers === */
-h1, h2, h3, h4 {
-    color: #003566 !important;
-    font-weight: 600 !important;
+.subtitle {
+    font-size: 1.1rem;
+    color: #475569;
+    margin-bottom: 2rem;
 }
 
-h1 {
-    font-size: 2.2rem !important;
-}
-h2 {
-    font-size: 1.6rem !important;
-    border-bottom: 2px solid #0077b6;
-    padding-bottom: 4px;
-    margin-bottom: 10px;
-}
-
-/* === Buttons === */
-button[kind="primary"] {
-    background: linear-gradient(90deg, #0077b6, #0096c7);
-    color: white !important;
-    border-radius: 8px !important;
-    padding: 0.5rem 1rem !important;
-    font-weight: 600;
+/* === Welcome Card === */
+.welcome-card {
+    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    color: #1e293b;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
 }
 
-button[kind="primary"]:hover {
-    background: linear-gradient(90deg, #0096c7, #00b4d8);
+/* === Navigation Cards === */
+.nav-card {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+    text-align: left;
 }
 
-/* === DataFrames & Tables === */
-.stDataFrame {
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    overflow: hidden;
+.nav-card h3 {
+    color: #1e3a8a;
+    font-size: 1.4rem;
+    margin-bottom: 0.5rem;
 }
 
-thead tr th {
-    background-color: #0077b6 !important;
-    color: white !important;
+.nav-card p {
+    color: #334155;
+    font-size: 0.95rem;
+    margin-bottom: 1rem;
 }
 
-/* === Card Component Style (for filings/news) === */
+.nav-button {
+    display: inline-block;
+    padding: 0.6rem 1.2rem;
+    background-color: #1d4ed8;
+    color: #ffffff;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background-color 0.2s ease-in-out;
+}
+
+.nav-button:hover {
+    background-color: #1e40af;
+}
+
+/* === Filings Cards (used in Frontend) === */
 .filing-card {
     background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
-    padding: 1.2rem;
+    border-radius: 1rem;
+    padding: 1rem 1.5rem;
     margin-bottom: 1rem;
-    transition: transform 0.1s ease-in-out;
-}
-
-.filing-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
 }
 
 .filing-title {
     font-size: 1.1rem;
-    color: #005f73;
     font-weight: 600;
+    color: #1e3a8a;
+    margin-bottom: 0.4rem;
 }
 
 .filing-meta {
     font-size: 0.9rem;
-    color: #6c757d;
+    color: #475569;
+    margin-bottom: 0.6rem;
 }
 
-/* === Sidebar === */
-section[data-testid="stSidebar"] {
-    background-color: #001d3d !important;
+/* === Footer === */
+.footer {
+    text-align: center;
+    color: #64748b;
+    font-size: 0.85rem;
+    padding: 1rem 0;
 }
 
-section[data-testid="stSidebar"] * {
-    color: #f8f9fa !important;
-}
-
-section[data-testid="stSidebar"] .stSelectbox label {
-    color: #dee2e6 !important;
-}
-
-/* === Links === */
-a {
-    color: #0077b6 !important;
-    text-decoration: none;
-}
-a:hover {
-    text-decoration: underline;
+.divider {
+    margin-top: 2rem;
+    margin-bottom: 0.5rem;
+    border: 0;
+    border-top: 1px solid #e2e8f0;
 }
