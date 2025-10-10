@@ -11,6 +11,15 @@ def load_css():
 
 load_css()
 
+# === Floating Theme Toggle ===
+def toggle_theme():
+    st.session_state["theme"] = "dark" if st.session_state["theme"] == "light" else "light"
+    st.rerun()
+
+icon = "🌙" if theme == "light" else "🌞"
+st.markdown(f"<div class='theme-toggle' onclick='window.location.reload()'>{icon}</div>", unsafe_allow_html=True)
+
+
 st.set_page_config(page_title="🖥️ Frontend Viewer", layout="wide")
 st.title("🖥️ Filings & Insights — End User View")
 
