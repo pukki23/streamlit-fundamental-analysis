@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime, timezone
+from datetime import datetime
 from supabase_client import supabase
 
 # --- Import modules ---
@@ -24,7 +24,7 @@ menu = st.sidebar.radio(
 )
 
 # ==========================================================
-# SECTION 1: 📈 FUNDAMENTAL ANALYSIS (Original app)
+# SECTION 1: 📈 FUNDAMENTAL ANALYSIS
 # ==========================================================
 if menu == "📈 Fundamental Analysis":
     st.header("📈 Fundamental Analysis & Market Data")
@@ -87,6 +87,7 @@ if menu == "📈 Fundamental Analysis":
 
             # --- News tab ---
             with tabs[len(selected_metrics)]:
+                st.subheader("📰 Latest News")
                 if news_items:
                     st.dataframe(pd.DataFrame(news_items))
                 else:
@@ -94,14 +95,11 @@ if menu == "📈 Fundamental Analysis":
 
             # --- Filings tab ---
             with tabs[len(selected_metrics) + 1]:
+                st.subheader("📄 Latest Filings")
                 if filings_items:
                     st.dataframe(pd.DataFrame(filings_items))
                 else:
                     st.info("No filings available")
-
-    # --- Optional: Show all companies ---
-    if st.checkbox("Show All Companies"):
-        st.dataframe(companies_df)
 
 # ==========================================================
 # SECTION 2: 📅 FILINGS DASHBOARD
@@ -200,12 +198,14 @@ elif menu == "📜 Filings History":
                     [
                         "company_name",
                         "ticker",
+                        "event_type",
                         "expected_date",
                         "filing_title",
                         "classification_label",
                         "classification_score",
                         "fetched_from",
                         "run_timestamp",
+                        "notes",
                     ]
                 ],
                 hide_index=True,
