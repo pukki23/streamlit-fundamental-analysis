@@ -1,22 +1,62 @@
 import streamlit as st
 from datetime import datetime
 
-# === Load Custom CSS ===
-def load_css():
-    try:
-        with open("assets/style.css") as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-    except FileNotFoundError:
-        st.warning("⚠️ CSS file not found at 'assets/style.css'. Please make sure it exists.")
-
-load_css()
-
 # === PAGE CONFIG ===
 st.set_page_config(
     page_title="📁 Financial Filings Tracker",
     layout="wide",
     page_icon="📈"
 )
+
+# === Load CSS ===
+def load_css(theme="light"):
+    """Load base CSS + theme overrides."""
+    try:
+        with open("assets/style.css") as f:
+            css = f.read()
+
+        # Inject theme-specific overrides
+        if theme == "dark":
+            css += """
+                body, .stApp {
+                    background-color: #0f172a !important;
+                    color: #f1f5f9 !important;
+                }
+                .main-title, .filing-title, h3 {
+                    color: #93c5fd !important;
+                }
+                .subtitle, .filing-meta, p, label, .footer {
+                    color: #cbd5e1 !important;
+                }
+                .nav-card, .filing-card {
+                    background-color: #1e293b !important;
+                    border-color: #334155 !important;
+                    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+                }
+                .nav-button {
+                    background-color: #2563eb !important;
+                    color: white !important;
+                }
+                .nav-button:hover {
+                    background-color: #1d4ed8 !important;
+                }
+            """
+        st.markdown(f"<style>{css}</style>", unsafe_allow_html=True)
+    except FileNotFoundError:
+        st.warning("⚠️ CSS file not found at 'assets/style.css'. Please ensure it exists.")
+
+
+# === THEME TOGGLE (Persistent via Session State) ===
+if "theme" not in st.session_state:
+    st.session_state["theme"] = "light"
+
+col1, col2 = st.columns([8, 2])
+with col2:
+    theme_choice = st.toggle("🌗 Dark Mode", value=st.session_state["theme"] == "dark")
+    st.session_state["theme"] = "dark" if theme_choice else "light"
+
+# Apply CSS based on current theme
+load_css(st.session_state["theme"])
 
 # === HEADER ===
 st.markdown("<h1 class='main-title'>📁 Financial Filings Tracker</h1>", unsafe_allow_html=True)
@@ -27,7 +67,7 @@ st.markdown(
     """
     <div class='welcome-card'>
         <p>
-            Welcome to your unified <strong>Financial Filings Tracker</strong> dashboard.  
+            Welcome to your unified <strong>Financial Filings Tracker</strong> dashboard.<br>
             Use the panels below to navigate between the <strong>Backend Admin Dashboard</strong>  
             and the <strong>Frontend Viewer</strong> for end users.
         </p>
