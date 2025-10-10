@@ -12,6 +12,8 @@ def save_or_update_filing(ticker, company_name, next_date, source="manual"):
         "pending_filing": True,
         "last_checked": datetime.datetime.utcnow().isoformat(),
         "filing_source": source,
+        "past_earnings_dates": [],
+        "next_earnings_dates": [],
     }
 
     existing = supabase.table("filings").select("*").eq("ticker", ticker).execute().data
@@ -68,6 +70,12 @@ def process_expired_or_due_filings():
 
 def get_next_filing():
     """Return the next upcoming filing."""
-    response = supabase.table("filings").select("*").order("next_earnings_date", desc=False).limit(1).execute()
+    response = (
+        supabase.table("filings")
+        .select("*")
+        .order("next_earnings_date", desc=False)
+        .limit(1)
+        .execute()
+    )
     data = response.data
     return data[0] if data else None
