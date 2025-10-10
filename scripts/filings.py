@@ -12,8 +12,6 @@ def save_or_update_filing(ticker, company_name, next_date, source="manual"):
         "pending_filing": True,
         "last_checked": datetime.datetime.utcnow().isoformat(),
         "filing_source": source,
-        "past_earnings_dates": [],
-        "next_earnings_dates": [],
     }
 
     existing = supabase.table("filings").select("*").eq("ticker", ticker).execute().data
@@ -31,20 +29,26 @@ def archive_filing_to_history(filing, filing_data=None):
         "ticker": filing["ticker"],
         "company_name": filing["company_name"],
         "event_type": "earning",
-        "expected_date": filing["next_earnings_date"],
+        "expected_date": filing.get("next_earnings_date"),
         "fetched_from": filing.get("filing_source", "unknown"),
         "notes": "Auto-archived after release",
     }
 
+    # Add optional scraped data
     if filing_data:
         entry.update({
             "filing_url": filing_data.get("filing_url"),
             "filing_title": filing_data.get("filing_title"),
             "filing_summary": filing_data.get("filing_summary"),
             "filing_text": filing_data.get("filing_text"),
+            "classification_label": filing_data.get("classification_label"),
+            "classification_score": filing_data.get("classification_score"),
         })
 
+    # Insert into history
     supabase.table("filings_history").insert(entry).execute()
+
+    # Delete from active filings
     supabase.table("filings").delete().eq("ticker", filing["ticker"]).execute()
 
 
