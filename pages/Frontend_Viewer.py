@@ -2,7 +2,7 @@ import streamlit as st
 import pandas as pd
 from supabase_client import supabase
 from scripts.analysis_module import analyze_ticker
-from scraper import find_and_extract_latest_filing
+from sripts.scraper import find_and_extract_latest_filing
 
 # --- Load CSS ---
 with open("assets/style.css") as f:
