@@ -1,135 +1,85 @@
 import streamlit as st
 import pandas as pd
-from datetime import datetime
 from supabase_client import supabase
-from scripts.scraper import find_and_extract_latest_filing
-from pathlib import Path
+from scripts.analysis_module import analyze_ticker
+from scraper import find_and_extract_latest_filing
 
-# =============================
-# PAGE CONFIG
-# =============================
-st.set_page_config(page_title="🖥️ Frontend Viewer", layout="wide")
+# --- Load CSS ---
+with open("assets/style.css") as f:
+    st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# =============================
-# LOAD CSS
-# =============================
-def load_css():
-    css_path = Path("assets/style.css")
-    if css_path.exists():
-        with open(css_path) as f:
-            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-load_css()
+st.title("🧭 Company Insights Viewer")
+st.markdown("Explore company fundamentals, filings, and financial reports in a friendly format.")
 
-# =============================
-# THEME TOGGLE (fixed bug)
-# =============================
-if "theme" not in st.session_state:
-    st.session_state["theme"] = "light"
+# --- Search Bar ---
+ticker = st.text_input("🔍 Enter Company Ticker or Name (e.g. AAPL, TSLA, MTN):").strip()
 
-def toggle_theme():
-    st.session_state["theme"] = "dark" if st.session_state["theme"] == "light" else "light"
-    st.rerun()
+if ticker:
+    try:
+        # --- Fundamental Analysis ---
+        st.subheader("📊 Fundamental Analysis")
+        with st.spinner("Analyzing fundamentals..."):
+            analysis = analyze_ticker(ticker)
+        
+        if analysis:
+            st.success("Analysis fetched successfully!")
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Market Cap", analysis.get("market_cap", "N/A"))
+            col2.metric("P/E Ratio", analysis.get("pe_ratio", "N/A"))
+            col3.metric("Dividend Yield", analysis.get("dividend_yield", "N/A"))
 
-icon = "🌙" if st.session_state["theme"] == "light" else "🌞"
-st.markdown(f"""
-<div class='theme-toggle' onclick='window.location.reload()' title='Toggle Theme'>{icon}</div>
-""", unsafe_allow_html=True)
+            st.markdown("### 📈 Performance Summary")
+            st.markdown(f"**Sector:** {analysis.get('sector', 'N/A')}")
+            st.markdown(f"**52 Week Range:** {analysis.get('52_week_range', 'N/A')}")
+            st.markdown(f"**Beta:** {analysis.get('beta', 'N/A')}")
+            st.markdown(f"**Recommendation:** {analysis.get('recommendation', 'N/A')}")
+        else:
+            st.warning("No analysis data found.")
 
-# =============================
-# HEADER
-# =============================
-st.markdown("""
-<div class='landing-container'>
-    <h1>🖥️ Filings & Insights — End User View</h1>
-    <p>Search, explore, and review the latest company filings and summaries in a clean interface.</p>
-</div>
-""", unsafe_allow_html=True)
+        # --- Filings Section ---
+        st.divider()
+        st.subheader("📂 Latest Company Filings")
 
-# ==========================================================
-# SECTION 1: FETCH LATEST FILING
-# ==========================================================
-st.header("📰 Fetch & View Latest Filing")
+        filings_data = supabase.table("filings").select("*").eq("ticker", ticker).execute()
+        if filings_data.data:
+            filings_df = pd.DataFrame(filings_data.data)
+            for _, row in filings_df.iterrows():
+                with st.expander(f"🗂️ {row['filing_title']} ({row.get('filing_type', 'Unknown')})"):
+                    st.markdown(f"**Date:** {row.get('filing_date', 'N/A')}")
+                    st.markdown(f"**Summary:** {row.get('filing_summary', 'No summary available')}")
+                    if row.get("filing_url"):
+                        st.markdown(f"[View Filing]({row['filing_url']})", unsafe_allow_html=True)
+        else:
+            st.info("No recent filings found for this company.")
 
-col1, col2 = st.columns(2)
-with col1:
-    company_name = st.text_input("Enter Company Name")
-with col2:
-    ticker = st.text_input("Enter Ticker Symbol (e.g., AAPL, MSFT)").upper().strip()
+        # --- Filing History Section ---
+        st.divider()
+        st.subheader("🕘 Filing History")
 
-if st.button("🔍 Fetch Latest Filing"):
-    if not company_name or not ticker:
-        st.warning("Please provide both company name and ticker.")
-    else:
-        with st.spinner("Fetching latest filing/news..."):
-            filing_data = find_and_extract_latest_filing(company_name)
+        history_data = supabase.table("filings_history").select("*").eq("ticker", ticker).execute()
+        if history_data.data:
+            history_df = pd.DataFrame(history_data.data)
+            st.dataframe(
+                history_df[["event_type", "filing_title", "expected_date", "classification_label", "classification_score"]],
+                use_container_width=True
+            )
+        else:
+            st.info("No filing history found for this company.")
 
-            if filing_data:
-                st.success("✅ Filing/news found and extracted!")
+        # --- Latest Filing from Scraper ---
+        st.divider()
+        st.subheader("📰 Latest Financial News Filing")
+        news_data = find_and_extract_latest_filing(ticker)
+        if news_data:
+            st.markdown(f"**{news_data['filing_title']}**")
+            st.markdown(news_data['filing_summary'])
+            st.markdown(f"[Read full article]({news_data['filing_url']})", unsafe_allow_html=True)
+            with st.expander("🧾 View Extracted Full Text"):
+                st.markdown(news_data['filing_text'])
+        else:
+            st.warning("No financial news articles found for this company.")
 
-                st.markdown(f"""
-                <div class="filing-card">
-                    <div class="filing-title">{filing_data['filing_title']}</div>
-                    <p class="filing-meta"><strong>Company:</strong> {company_name} ({ticker})</p>
-                    <p class="filing-meta"><strong>Source:</strong> {filing_data['fetched_from']}</p>
-                    <p>{filing_data['filing_summary']}</p>
-                    <a href="{filing_data['filing_url']}" target="_blank">🔗 View Original Filing</a>
-                </div>
-                """, unsafe_allow_html=True)
-
-                st.subheader("📜 Extracted Filing Text (Preview)")
-                filing_text = filing_data.get("filing_text", "")
-                if filing_text:
-                    st.write(filing_text[:2000] + "..." if len(filing_text) > 2000 else filing_text)
-                else:
-                    st.info("No text extracted.")
-
-                # Save filing to Supabase
-                supabase.table("filings_history").insert({
-                    "ticker": ticker,
-                    "company_name": company_name,
-                    "event_type": "earning",
-                    "expected_date": datetime.now().isoformat(),
-                    "filing_url": filing_data.get("filing_url"),
-                    "filing_title": filing_data.get("filing_title"),
-                    "filing_summary": filing_data.get("filing_summary"),
-                    "filing_text": filing_text,
-                    "classification_label": None,
-                    "classification_score": None,
-                    "fetched_from": filing_data.get("fetched_from"),
-                    "run_timestamp": datetime.now().isoformat(),
-                    "notes": None,
-                }).execute()
-
-                st.info("Saved successfully to filings_history table.")
-            else:
-                st.error("No recent filing found for this company.")
-
-# ==========================================================
-# SECTION 2: VIEW FILING HISTORY
-# ==========================================================
-st.header("📜 Recent Filings History")
-
-try:
-    history = (
-        supabase.table("filings_history")
-        .select("*")
-        .order("expected_date", desc=True)
-        .limit(50)
-        .execute()
-    )
-
-    history_data = history.data or []
-    if history_data:
-        for row in history_data:
-            st.markdown(f"""
-            <div class="filing-card">
-                <div class="filing-title">{row.get('filing_title', 'Untitled Filing')}</div>
-                <p class="filing-meta"><strong>{row.get('company_name', '')}</strong> ({row.get('ticker', '')}) — {row.get('event_type', '')}</p>
-                <p>{(row.get('filing_summary') or '')[:250]}...</p>
-                <a href="{row.get('filing_url', '#')}" target="_blank">🔗 View Filing</a>
-            </div>
-            """, unsafe_allow_html=True)
-    else:
-        st.info("No filing history yet.")
-except Exception as e:
-    st.error(f"Error loading filing history: {e}")
+    except Exception as e:
+        st.error(f"An error occurred: {e}")
+else:
+    st.info("Enter a company ticker or name above to explore insights.")
