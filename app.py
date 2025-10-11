@@ -7,6 +7,9 @@ if css_path.exists():
     with open(css_path) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+#----------- Show Streamlit Version ----------
+st.sidebar.info(f"Streamlit version: {st.__version__}")
+
 # ---------- Landing Section ----------
 st.markdown("""
 <div class='landing-container'>
