@@ -2,24 +2,33 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from supabase_client import supabase
+from pathlib import Path
 
-# === Load Custom CSS ===
+# === PAGE CONFIG ===
+st.set_page_config(page_title="📊 Backend Dashboard", layout="wide")
+
+# === LOAD CSS ===
 def load_css():
-    with open("assets/style.css") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
+    css_path = Path("assets/style.css")
+    if css_path.exists():
+        with open(css_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 load_css()
 
-# === Floating Theme Toggle ===
+# === THEME TOGGLE (fixed) ===
+if "theme" not in st.session_state:
+    st.session_state["theme"] = "light"
+
 def toggle_theme():
     st.session_state["theme"] = "dark" if st.session_state["theme"] == "light" else "light"
     st.rerun()
 
-icon = "🌙" if theme == "light" else "🌞"
-st.markdown(f"<div class='theme-toggle' onclick='window.location.reload()'>{icon}</div>", unsafe_allow_html=True)
+icon = "🌙" if st.session_state["theme"] == "light" else "🌞"
+st.markdown(f"""
+<div class='theme-toggle' onclick='window.location.reload()' title='Toggle Theme'>{icon}</div>
+""", unsafe_allow_html=True)
 
-
-# --- Import modules ---
+# === IMPORT MODULES ===
 from scripts.analysis_module import analyze_ticker
 from scripts.euronews_module import push_news
 from scripts.filings import (
@@ -28,17 +37,22 @@ from scripts.filings import (
     get_next_filing,
 )
 
-# --- PAGE CONFIG ---
-st.set_page_config(page_title="📊 Backend Dashboard", layout="wide")
-st.title("📊 Backend — Fundamental & Filings Management")
+# === HEADER ===
+st.markdown("""
+<div class='landing-container'>
+    <h1>📊 Backend — Fundamental & Filings Management</h1>
+    <p>Admin view for analyzing fundamentals, managing filings, and running backend processes.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ==========================================================
-# FUNDAMENTAL ANALYSIS (Admin Mode)
+# FUNDAMENTAL ANALYSIS
 # ==========================================================
-st.header("📈 Fundamental Analysis (Backend View)")
+st.header("📈 Fundamental Analysis")
 
 companies_data = supabase.table("companies").select("ticker, company_name").execute()
 companies_df = pd.DataFrame(companies_data.data or [])
+
 tickers = sorted(companies_df["ticker"].tolist()) if not companies_df.empty else []
 company_names = sorted(companies_df["company_name"].tolist()) if not companies_df.empty else []
 
@@ -67,7 +81,7 @@ def get_fundamentals(ticker, metrics):
 def get_news(ticker, company_name):
     return push_news(ticker, company_name)
 
-if st.sidebar.button("Fetch & Analyze"):
+if st.sidebar.button("🔍 Fetch & Analyze"):
     if not ticker_choice or not company_choice:
         st.warning("Please select both ticker and company.")
     else:
@@ -95,9 +109,9 @@ if st.sidebar.button("Fetch & Analyze"):
                 st.info("No news available")
 
 # ==========================================================
-# FILINGS DASHBOARD (Admin Mode)
+# FILINGS DASHBOARD
 # ==========================================================
-st.header("📅 Filings Dashboard (Backend)")
+st.header("📅 Filings Dashboard")
 
 with st.spinner("Processing expired or due filings..."):
     processed = process_expired_or_due_filings()
@@ -109,16 +123,20 @@ else:
 st.subheader("⏭️ Next Expected Filing")
 next_filing = get_next_filing()
 if next_filing:
-    st.write(f"**Company:** {next_filing['company_name']} ({next_filing['ticker']})")
-    st.write(f"**Expected Date:** {next_filing['next_earnings_date']}")
-    st.write(f"**Pending:** {'✅ Yes' if next_filing['pending_filing'] else '❌ No'}")
-    st.write(f"**Source:** {next_filing.get('filing_source', 'N/A')}")
+    st.markdown(f"""
+    <div class="filing-card">
+        <div class="filing-title">{next_filing['company_name']} ({next_filing['ticker']})</div>
+        <p><strong>Expected Date:</strong> {next_filing['next_earnings_date']}</p>
+        <p><strong>Pending:</strong> {'✅ Yes' if next_filing['pending_filing'] else '❌ No'}</p>
+        <p><strong>Source:</strong> {next_filing.get('filing_source', 'N/A')}</p>
+    </div>
+    """, unsafe_allow_html=True)
 else:
     st.info("No upcoming filings found.")
 
 st.divider()
 
-# --- Active filings table ---
+# --- ACTIVE FILINGS ---
 st.subheader("🗓️ Active Filings")
 try:
     filings = (
@@ -158,7 +176,7 @@ except Exception as e:
 
 st.divider()
 
-# --- Add or update filing form ---
+# --- ADD/UPDATE FILING FORM ---
 st.subheader("➕ Add or Update Filing")
 with st.form("add_filing_form"):
     col1, col2 = st.columns(2)
@@ -169,7 +187,7 @@ with st.form("add_filing_form"):
         date = st.date_input("Next Filing Date", datetime.now().date())
         source = st.text_input("Source", "manual")
 
-    submit = st.form_submit_button("Save Filing")
+    submit = st.form_submit_button("💾 Save Filing")
 
     if submit:
         if ticker and company:
