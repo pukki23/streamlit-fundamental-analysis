@@ -2,181 +2,116 @@ import streamlit as st
 import pandas as pd
 from supabase_client import supabase
 from scripts.analysis_module import analyze_ticker
-from scripts.euronews_module import push_news
+from scripts.euronews_module import fetch_news
 
-# === Load CSS ===
-with open("assets/style.css") as f:
+# --- Load CSS ---
+with open("assets/frontend_style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# === PAGE CONFIG ===
-st.set_page_config(page_title="🧭 Frontend Viewer", layout="wide")
 st.title("🧭 Company Insights Viewer")
-st.markdown("Discover company fundamentals, filings, and curated news in a simple and elegant interface.")
+st.markdown("<h4 class='subtitle'>Explore company data, filings, and news in a clean, user-friendly format.</h4>", unsafe_allow_html=True)
 
-st.divider()
-
-# === INPUT AREA ===
-col1, col2, col3 = st.columns([2, 2, 1])
-
+# --- Input Section ---
+col1, col2 = st.columns([2, 1])
 with col1:
-    company_name = st.text_input("🏢 Company Name (auto-filled if ticker found):").strip()
-
+    company_name = st.text_input("🏢 Company Name (e.g. Apple, Tesla, MTN):").strip()
 with col2:
-    ticker = st.text_input("🔍 Company Ticker (e.g., AAPL, MTNN, TSLA):").strip()
+    ticker = st.text_input("🔠 Ticker (optional):").strip()
 
-# Auto-fill company name from Supabase
-if ticker and not company_name:
-    with st.spinner("🔎 Looking up company name..."):
-        res = supabase.table("companies").select("company_name").eq("ticker", ticker.upper()).execute()
-        if res.data:
-            company_name = res.data[0]["company_name"]
-            st.session_state["company_name"] = company_name
-            st.success(f"✅ Found company: {company_name}")
-        else:
-            st.warning("⚠️ Company name not found for this ticker. Please type manually.")
-
-with col3:
-    st.markdown("<br>", unsafe_allow_html=True)
-    run_analysis = st.button("🚀 Run Analysis", use_container_width=True)
-
-# === METRIC SELECTION ===
-with st.expander("⚙️ Select Metrics to Analyze"):
-    metrics = st.multiselect(
-        "Choose metrics:",
-        [
-            "valuation",
-            "profitability",
-            "growth",
-            "balance",
-            "cashflow",
-            "dividends",
-            "recommendations",
-        ],
-        default=["valuation", "profitability", "growth"]
-    )
-
-# === Column Rename Map (for Supabase tables) ===
-column_rename_map = {
-    "filing_title": "Filing Title",
-    "filing_type": "Filing Type",
-    "filing_date": "Filing Date",
-    "filing_summary": "Summary",
-    "next_earnings_date": "Next Filing Date",
-    "previous_earnings_date": "Previous Filing Date",
-    "classification_label": "Classification",
-    "classification_score": "Confidence",
-    "expected_date": "Expected Date",
-    "event_type": "Event Type"
-}
-
-# === MAIN EXECUTION ===
-if run_analysis and ticker and company_name:
+if company_name or ticker:
     try:
-        with st.spinner(f"Fetching insights for {company_name} ({ticker})..."):
-            fundamentals = analyze_ticker(ticker, metrics)
-            news_items = push_news(company_name, ticker)
+        # --- Fundamental Analysis ---
+        st.subheader("📊 Fundamental Analysis")
+        with st.spinner("Analyzing company fundamentals..."):
+            analysis = analyze_ticker(ticker or company_name, metrics=["market_cap", "pe_ratio", "dividend_yield", "sector", "beta", "52_week_range", "recommendation"])
 
-        st.success(f"✅ Analysis complete for {company_name} ({ticker})")
+        if analysis:
+            st.success("✅ Analysis loaded successfully!")
 
-        # === Tabs Layout ===
-        overview_tab, filings_tab, history_tab, news_tab = st.tabs(
-            ["📊 Overview", "📂 Filings", "🕘 History", "🌍 News"]
-        )
+            col1, col2, col3 = st.columns(3)
+            col1.metric("Market Cap", analysis.get("market_cap", "N/A"))
+            col2.metric("P/E Ratio", analysis.get("pe_ratio", "N/A"))
+            col3.metric("Dividend Yield", analysis.get("dividend_yield", "N/A"))
 
-        # --------------------------------------------------------------------
-        # TAB 1 — OVERVIEW
-        # --------------------------------------------------------------------
-        with overview_tab:
-            st.header(f"📊 Fundamentals — {company_name}")
-            for metric in metrics:
-                data = fundamentals.get(metric, {})
-                if not data:
-                    continue
+            st.markdown(f"**Sector:** {analysis.get('sector', 'N/A')}")
+            st.markdown(f"**52 Week Range:** {analysis.get('52_week_range', 'N/A')}")
+            st.markdown(f"**Beta:** {analysis.get('beta', 'N/A')}")
+            st.markdown(f"**Recommendation:** {analysis.get('recommendation', 'N/A')}")
+        else:
+            st.warning("No analysis data found.")
 
-                st.subheader(metric.capitalize())
-                if isinstance(data, dict):
-                    items = list(data.items())
-                    for i in range(0, len(items), 2):
-                        cols = st.columns(2)
-                        for j in range(2):
-                            if i + j < len(items):
-                                key, value = items[i + j]
-                                cols[j].markdown(
-                                    f"""
-                                    <div class="metric-card">
-                                        <div class="metric-key">{key.replace('_', ' ').title()}</div>
-                                        <div class="metric-value">{value}</div>
-                                    </div>
-                                    """,
-                                    unsafe_allow_html=True
-                                )
-                elif isinstance(data, pd.DataFrame):
-                    st.dataframe(data, use_container_width=True)
-                else:
-                    st.write(data)
+        # --- Filings Section ---
+        st.divider()
+        st.subheader("📂 Recent Filings")
 
-        # --------------------------------------------------------------------
-        # TAB 2 — FILINGS
-        # --------------------------------------------------------------------
-        with filings_tab:
-            st.header(f"📂 Recent Filings — {company_name}")
-            filings = supabase.table("filings").select("*").eq("ticker", ticker).execute()
+        filings_data = supabase.table("filings").select("*").eq("ticker", ticker).execute()
+        filings_df = pd.DataFrame(filings_data.data) if filings_data.data else pd.DataFrame()
 
-            if filings.data:
-                filings_df = pd.DataFrame(filings.data)
-                filings_df.rename(columns=column_rename_map, inplace=True)
-                filings_df = filings_df.sort_values(by="Next Filing Date", ascending=False)
+        if not filings_df.empty:
+            visible_filings = filings_df.head(2)
+            for _, row in visible_filings.iterrows():
+                with st.expander(f"🗂️ {row.get('filing_title', 'Untitled')} - {row.get('filing_date', 'N/A')}"):
+                    st.markdown(f"**Filing Type:** {row.get('filing_type', 'N/A')}")
+                    st.markdown(f"**Date:** {row.get('filing_date', 'N/A')}")
+                    st.markdown(f"**Summary:** {row.get('filing_summary', 'No summary available')}")
+                    if row.get("filing_url"):
+                        st.markdown(f"[🔗 View Full Filing]({row['filing_url']})", unsafe_allow_html=True)
 
-                for _, row in filings_df.iterrows():
-                    st.markdown(f"""
-                    <div class="filing-card">
-                        <div class="filing-title">{row.get('Filing Title', 'Untitled')}</div>
-                        <p><strong>Type:</strong> {row.get('Filing Type', 'N/A')}<br>
-                        <strong>Date:</strong> {row.get('Filing Date', 'N/A')}<br>
-                        <strong>Next Filing:</strong> {row.get('Next Filing Date', 'N/A')}<br>
-                        <strong>Previous Filing:</strong> {row.get('Previous Filing Date', 'N/A')}</p>
-                        <p>{row.get('Summary', 'No summary available')}</p>
-                        <a href="{row.get('filing_url', '#')}" target="_blank">🔗 View Full Filing</a>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("No filings found for this company.")
+            if len(filings_df) > 2:
+                with st.expander("📜 Show More Filings"):
+                    for _, row in filings_df.iloc[2:].iterrows():
+                        st.markdown(f"**{row.get('filing_title', 'Untitled')}**  \n📅 {row.get('filing_date', 'N/A')}  \n[{row.get('filing_type', 'View Filing')}]({row.get('filing_url', '#')})")
+                        st.divider()
+        else:
+            st.info("No filings found for this company.")
 
-        # --------------------------------------------------------------------
-        # TAB 3 — HISTORY
-        # --------------------------------------------------------------------
-        with history_tab:
-            st.header(f"🕘 Filing History — {company_name}")
-            history = supabase.table("filings_history").select("*").eq("ticker", ticker).execute()
-            if history.data:
-                df_history = pd.DataFrame(history.data)
-                df_history.rename(columns=column_rename_map, inplace=True)
-                st.dataframe(df_history, use_container_width=True, hide_index=True)
-            else:
-                st.info("No filing history found.")
+        # --- Filing History Section ---
+        st.divider()
+        st.subheader("🕘 Filing History")
 
-        # --------------------------------------------------------------------
-        # TAB 4 — NEWS
-        # --------------------------------------------------------------------
-        with news_tab:
-            st.header(f"🌍 Latest News — {company_name}")
-            if news_items:
-                for news in news_items:
-                    st.markdown(f"""
-                    <div class="news-card">
-                        <div class="news-header">
-                            <h4>{news.get('title', 'Untitled')}</h4>
-                            <p class="news-meta">🗓️ {news.get('published_date', 'N/A')}</p>
-                        </div>
-                        <p>{news.get('summary', 'No summary available')}</p>
-                        <a href="{news.get('url', '#')}" target="_blank">🔗 Read full article →</a>
-                    </div>
-                    """, unsafe_allow_html=True)
-            else:
-                st.info("No recent news found for this company.")
+        history_data = supabase.table("filings_history").select("*").eq("ticker", ticker).execute()
+        history_df = pd.DataFrame(history_data.data) if history_data.data else pd.DataFrame()
+
+        if not history_df.empty:
+            visible_history = history_df.head(2)
+            for _, row in visible_history.iterrows():
+                with st.expander(f"📅 {row.get('expected_date', 'N/A')} - {row.get('filing_title', 'Unknown')}"):
+                    st.markdown(f"**Event:** {row.get('event_type', 'N/A')}")
+                    st.markdown(f"**Classification:** {row.get('classification_label', 'N/A')} ({row.get('classification_score', 'N/A')})")
+
+            if len(history_df) > 2:
+                with st.expander("📜 Show More Filing History"):
+                    st.dataframe(
+                        history_df[["event_type", "filing_title", "expected_date", "classification_label", "classification_score"]],
+                        use_container_width=True,
+                    )
+        else:
+            st.info("No filing history available.")
+
+        # --- News Section ---
+        st.divider()
+        st.subheader("📰 Latest Company News")
+        with st.spinner("Fetching latest news..."):
+            news_items = fetch_news(ticker or company_name, company_name)
+
+        if news_items:
+            visible_news = news_items[:2]
+            for item in visible_news:
+                with st.expander(f"🗞️ {item['title']}"):
+                    st.markdown(f"<div class='news-card'><b>Source:</b> {item['source']}<br><b>Date:</b> {item.get('published', 'N/A')}<br><a href='{item['link']}' target='_blank'>Read full article</a></div>", unsafe_allow_html=True)
+
+            if len(news_items) > 2:
+                with st.expander("📰 Show More News (Scrollable)"):
+                    st.markdown("<div class='scrollable-section'>", unsafe_allow_html=True)
+                    for item in news_items[2:]:
+                        st.markdown(f"<div class='news-card'><b>{item['title']}</b><br><i>{item['source']}</i><br><a href='{item['link']}' target='_blank'>Read</a></div>", unsafe_allow_html=True)
+                        st.markdown("<hr>", unsafe_allow_html=True)
+                    st.markdown("</div>", unsafe_allow_html=True)
+        else:
+            st.info("No recent news found for this company.")
 
     except Exception as e:
         st.error(f"❌ Error: {e}")
 
 else:
-    st.info("Enter both the **Company Name** and **Ticker**, select metrics, then click **Run Analysis**.")
+    st.info("Enter a company name or ticker above to explore insights.")
