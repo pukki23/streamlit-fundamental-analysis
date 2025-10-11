@@ -1,70 +1,136 @@
-/* --- Global Layout --- */
+/* === Global Layout === */
 body, .stApp {
     background-color: #ffffff !important;
-    color: #222222 !important; /* Dark readable text */
-    font-family: 'Segoe UI', sans-serif;
+    color: #222222 !important;
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
 }
 
-/* --- Titles & Headers --- */
-h1, h2, h3, h4, .subtitle {
-    color: #b71c1c !important; /* Deep red for emphasis */
+/* === Page Titles & Headers === */
+h1, h2, h3, h4 {
+    color: #b71c1c !important; /* deep red for contrast */
+    text-align: center;
 }
 
 .subtitle {
     font-size: 1.1rem;
+    text-align: center;
+    color: #333333 !important;
     margin-bottom: 20px;
-    color: #333333 !important; /* Dark neutral for readability */
 }
 
-/* --- Cards & Expanders --- */
-div[data-testid="stExpander"] {
+/* === Form Labels === */
+label, .stTextInput label, .stTextInput div p {
+    color: #111111 !important;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 5px !important;
+    display: block;
+}
+
+/* === Input Fields === */
+.stTextInput input {
+    color: #000000 !important;
     background-color: #ffffff !important;
-    border: 1px solid #ccc;
-    border-radius: 12px;
-    padding: 10px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    border: 1.5px solid #bdbdbd !important;
+    border-radius: 8px !important;
+    padding: 8px 10px !important;
+    width: 100%;
+    transition: all 0.2s ease-in-out;
+}
+.stTextInput input:focus {
+    border-color: #b71c1c !important;
+    box-shadow: 0 0 6px rgba(183, 28, 28, 0.3) !important;
+    outline: none !important;
 }
 
+/* === Form Field Spacing === */
+.css-1dp5vir, .stTextInput {
+    margin-bottom: 20px !important;
+}
+
+/* === Metrics Section === */
+[data-testid="stMetricValue"] {
+    color: #222 !important;
+    font-weight: bold;
+    font-size: 1.1rem;
+}
+[data-testid="stMetricLabel"] {
+    color: #444 !important;
+}
+
+/* === Expanders (Cards) === */
+div[data-testid="stExpander"] {
+    background-color: #fff !important;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    margin-bottom: 10px;
+}
 div[data-testid="stExpander"] p, 
 div[data-testid="stExpander"] span {
     color: #222 !important;
 }
 
-/* --- Metrics --- */
-[data-testid="stMetricValue"] {
-    color: #222 !important;
-    font-weight: bold;
-}
-
-/* --- Scrollable Section --- */
+/* === Scrollable Sections === */
 .scrollable-section {
-    max-height: 300px;
+    max-height: 350px;
     overflow-y: auto;
     padding: 10px;
 }
 
-/* --- News Cards --- */
+/* === News Cards === */
 .news-card {
     background: #f8f8f8;
     border-radius: 10px;
-    padding: 12px;
-    margin-bottom: 10px;
+    padding: 14px;
+    margin-bottom: 12px;
     border: 1px solid #ddd;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
 }
-
 .news-card b {
     color: #111 !important;
+    font-size: 1rem;
 }
 .news-card i {
-    color: #444 !important;
+    color: #555 !important;
+    font-size: 0.9rem;
 }
 
-/* --- Links --- */
+/* === Links === */
 a {
     color: #1565c0 !important;
     text-decoration: none;
+    font-weight: 500;
 }
 a:hover {
     text-decoration: underline;
+}
+
+/* === Section Titles === */
+.stSubheader, .stMarkdown h2, .stMarkdown h3 {
+    color: #b71c1c !important;
+    margin-top: 25px;
+    margin-bottom: 15px;
+}
+
+/* === Buttons === */
+.stButton>button {
+    background-color: #b71c1c !important;
+    color: white !important;
+    font-weight: 600;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.stButton>button:hover {
+    background-color: #a31515 !important;
+}
+
+/* === Center content === */
+.main .block-container {
+    max-width: 850px !important;
+    margin: 0 auto !important;
 }
