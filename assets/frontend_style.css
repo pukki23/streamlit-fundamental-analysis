@@ -1,32 +1,38 @@
 /* --- Global Layout --- */
 body, .stApp {
-    background-color: #fafafa !important;
-    color: #111 !important;
+    background-color: #ffffff !important;
+    color: #222222 !important; /* Dark readable text */
     font-family: 'Segoe UI', sans-serif;
 }
 
 /* --- Titles & Headers --- */
 h1, h2, h3, h4, .subtitle {
-    color: #d32f2f !important; /* Bright red text */
+    color: #b71c1c !important; /* Deep red for emphasis */
 }
 
 .subtitle {
     font-size: 1.1rem;
     margin-bottom: 20px;
+    color: #333333 !important; /* Dark neutral for readability */
 }
 
 /* --- Cards & Expanders --- */
 div[data-testid="stExpander"] {
     background-color: #ffffff !important;
-    border: 1px solid #ddd;
+    border: 1px solid #ccc;
     border-radius: 12px;
     padding: 10px;
-    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+div[data-testid="stExpander"] p, 
+div[data-testid="stExpander"] span {
+    color: #222 !important;
 }
 
 /* --- Metrics --- */
 [data-testid="stMetricValue"] {
-    color: #d32f2f !important;
+    color: #222 !important;
     font-weight: bold;
 }
 
@@ -39,12 +45,19 @@ div[data-testid="stExpander"] {
 
 /* --- News Cards --- */
 .news-card {
-    background: #fff;
+    background: #f8f8f8;
     border-radius: 10px;
     padding: 12px;
     margin-bottom: 10px;
     border: 1px solid #ddd;
     box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+}
+
+.news-card b {
+    color: #111 !important;
+}
+.news-card i {
+    color: #444 !important;
 }
 
 /* --- Links --- */
