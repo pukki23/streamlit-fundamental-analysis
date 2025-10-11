@@ -2,84 +2,140 @@ import streamlit as st
 import pandas as pd
 from supabase_client import supabase
 from scripts.analysis_module import analyze_ticker
-from sripts.scraper import find_and_extract_latest_filing
+from scripts.euronews_module import push_news
+from scripts.scraper import find_and_extract_latest_filing
 
-# --- Load CSS ---
+# === Load Custom CSS ===
 with open("assets/style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+# === PAGE CONFIG ===
+st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
 st.title("🧭 Company Insights Viewer")
-st.markdown("Explore company fundamentals, filings, and financial reports in a friendly format.")
+st.markdown("Explore company fundamentals, filings, and global financial news in a friendly, visual format.")
 
-# --- Search Bar ---
+# === INPUT SECTION ===
+st.divider()
 ticker = st.text_input("🔍 Enter Company Ticker or Name (e.g. AAPL, TSLA, MTN):").strip()
 
+# =====================================================================
+# MAIN LOGIC
+# =====================================================================
 if ticker:
     try:
-        # --- Fundamental Analysis ---
-        st.subheader("📊 Fundamental Analysis")
-        with st.spinner("Analyzing fundamentals..."):
-            analysis = analyze_ticker(ticker)
-        
-        if analysis:
-            st.success("Analysis fetched successfully!")
+        # --------------------------------------------------------------
+        # SECTION 1: FUNDAMENTAL ANALYSIS
+        # --------------------------------------------------------------
+        st.header("📊 Fundamental Analysis")
+        with st.spinner("Fetching and analyzing fundamentals..."):
+            fundamentals = analyze_ticker(ticker)
+
+        if fundamentals:
+            st.success("✅ Analysis fetched successfully!")
             col1, col2, col3 = st.columns(3)
-            col1.metric("Market Cap", analysis.get("market_cap", "N/A"))
-            col2.metric("P/E Ratio", analysis.get("pe_ratio", "N/A"))
-            col3.metric("Dividend Yield", analysis.get("dividend_yield", "N/A"))
+            col1.metric("Market Cap", fundamentals.get("market_cap", "N/A"))
+            col2.metric("P/E Ratio", fundamentals.get("pe_ratio", "N/A"))
+            col3.metric("Dividend Yield", fundamentals.get("dividend_yield", "N/A"))
 
-            st.markdown("### 📈 Performance Summary")
-            st.markdown(f"**Sector:** {analysis.get('sector', 'N/A')}")
-            st.markdown(f"**52 Week Range:** {analysis.get('52_week_range', 'N/A')}")
-            st.markdown(f"**Beta:** {analysis.get('beta', 'N/A')}")
-            st.markdown(f"**Recommendation:** {analysis.get('recommendation', 'N/A')}")
+            st.markdown("### 📈 Performance Overview")
+            perf_cols = st.columns(2)
+            with perf_cols[0]:
+                st.markdown(f"**Sector:** {fundamentals.get('sector', 'N/A')}")
+                st.markdown(f"**52 Week Range:** {fundamentals.get('52_week_range', 'N/A')}")
+                st.markdown(f"**Beta:** {fundamentals.get('beta', 'N/A')}")
+            with perf_cols[1]:
+                st.markdown(f"**Recommendation:** {fundamentals.get('recommendation', 'N/A')}")
+                st.markdown(f"**Growth Score:** {fundamentals.get('growth_score', 'N/A')}")
+                st.markdown(f"**Profitability:** {fundamentals.get('profitability', 'N/A')}")
         else:
-            st.warning("No analysis data found.")
+            st.warning("⚠️ No fundamentals found for this company.")
 
-        # --- Filings Section ---
+        # --------------------------------------------------------------
+        # SECTION 2: FILINGS
+        # --------------------------------------------------------------
         st.divider()
-        st.subheader("📂 Latest Company Filings")
-
+        st.header("📂 Latest Company Filings")
         filings_data = supabase.table("filings").select("*").eq("ticker", ticker).execute()
+
         if filings_data.data:
             filings_df = pd.DataFrame(filings_data.data)
             for _, row in filings_df.iterrows():
-                with st.expander(f"🗂️ {row['filing_title']} ({row.get('filing_type', 'Unknown')})"):
-                    st.markdown(f"**Date:** {row.get('filing_date', 'N/A')}")
-                    st.markdown(f"**Summary:** {row.get('filing_summary', 'No summary available')}")
-                    if row.get("filing_url"):
-                        st.markdown(f"[View Filing]({row['filing_url']})", unsafe_allow_html=True)
+                st.markdown(f"""
+                <div class="filing-card">
+                    <div class="filing-title">🗂️ {row.get('filing_title', 'Untitled')}</div>
+                    <p class="filing-meta">
+                        <strong>Date:</strong> {row.get('next_earnings_date', 'N/A')}<br>
+                        <strong>Source:</strong> {row.get('filing_source', 'N/A')}
+                    </p>
+                    <p>{row.get('filing_summary', 'No summary available')}</p>
+                    <a href="{row.get('filing_url', '#')}" target="_blank">🔗 View Filing</a>
+                </div>
+                """, unsafe_allow_html=True)
         else:
-            st.info("No recent filings found for this company.")
+            st.info("No active filings found for this company.")
 
-        # --- Filing History Section ---
+        # --------------------------------------------------------------
+        # SECTION 3: FILING HISTORY
+        # --------------------------------------------------------------
         st.divider()
-        st.subheader("🕘 Filing History")
+        st.header("🕘 Filing History")
 
         history_data = supabase.table("filings_history").select("*").eq("ticker", ticker).execute()
         if history_data.data:
             history_df = pd.DataFrame(history_data.data)
             st.dataframe(
-                history_df[["event_type", "filing_title", "expected_date", "classification_label", "classification_score"]],
-                use_container_width=True
+                history_df[
+                    ["event_type", "filing_title", "expected_date", "classification_label", "classification_score"]
+                ],
+                use_container_width=True,
+                hide_index=True
             )
         else:
-            st.info("No filing history found for this company.")
+            st.info("No filing history available.")
 
-        # --- Latest Filing from Scraper ---
+        # --------------------------------------------------------------
+        # SECTION 4: SCRAPED FILINGS / NEWS
+        # --------------------------------------------------------------
         st.divider()
-        st.subheader("📰 Latest Financial News Filing")
-        news_data = find_and_extract_latest_filing(ticker)
-        if news_data:
-            st.markdown(f"**{news_data['filing_title']}**")
-            st.markdown(news_data['filing_summary'])
-            st.markdown(f"[Read full article]({news_data['filing_url']})", unsafe_allow_html=True)
+        st.header("📰 Latest Financial News Filing")
+
+        scraped_news = find_and_extract_latest_filing(ticker)
+        if scraped_news:
+            st.markdown(f"""
+            <div class="filing-card">
+                <div class="filing-title">{scraped_news['filing_title']}</div>
+                <p>{scraped_news['filing_summary']}</p>
+                <a href="{scraped_news['filing_url']}" target="_blank">🔗 View Full Article</a>
+            </div>
+            """, unsafe_allow_html=True)
             with st.expander("🧾 View Extracted Full Text"):
-                st.markdown(news_data['filing_text'])
+                st.markdown(scraped_news['filing_text'])
         else:
-            st.warning("No financial news articles found for this company.")
+            st.warning("No recent financial news filing found for this ticker.")
+
+        # --------------------------------------------------------------
+        # SECTION 5: EURONEWS INTEGRATION
+        # --------------------------------------------------------------
+        st.divider()
+        st.header("🌍 Global Financial & Business News (Euronews)")
+
+        with st.spinner("Fetching latest Euronews stories..."):
+            euronews_items = push_news(ticker, ticker)
+
+        if euronews_items:
+            for news in euronews_items[:5]:
+                st.markdown(f"""
+                <div class="news-card">
+                    <h4>📰 {news.get('title', 'Untitled')}</h4>
+                    <p>{news.get('summary', '')}</p>
+                    <a href="{news.get('url', '#')}" target="_blank">🔗 Read Article</a>
+                    <p class="news-meta">Source: Euronews | Date: {news.get('published_date', 'N/A')}</p>
+                </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("No relevant Euronews stories found.")
 
     except Exception as e:
-        st.error(f"An error occurred: {e}")
+        st.error(f"❌ Error: {e}")
 else:
     st.info("Enter a company ticker or name above to explore insights.")
