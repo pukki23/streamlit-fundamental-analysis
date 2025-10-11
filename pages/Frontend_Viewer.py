@@ -3,35 +3,60 @@ import pandas as pd
 from datetime import datetime
 from supabase_client import supabase
 from scripts.scraper import find_and_extract_latest_filing
+from pathlib import Path
 
-# === Load Custom CSS ===
+# =============================
+# PAGE CONFIG
+# =============================
+st.set_page_config(page_title="🖥️ Frontend Viewer", layout="wide")
+
+# =============================
+# LOAD CSS
+# =============================
 def load_css():
-    with open("assets/style.css") as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
+    css_path = Path("assets/style.css")
+    if css_path.exists():
+        with open(css_path) as f:
+            st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 load_css()
 
-# === Floating Theme Toggle ===
+# =============================
+# THEME TOGGLE (fixed bug)
+# =============================
+if "theme" not in st.session_state:
+    st.session_state["theme"] = "light"
+
 def toggle_theme():
     st.session_state["theme"] = "dark" if st.session_state["theme"] == "light" else "light"
     st.rerun()
 
-icon = "🌙" if theme == "light" else "🌞"
-st.markdown(f"<div class='theme-toggle' onclick='window.location.reload()'>{icon}</div>", unsafe_allow_html=True)
+icon = "🌙" if st.session_state["theme"] == "light" else "🌞"
+st.markdown(f"""
+<div class='theme-toggle' onclick='window.location.reload()' title='Toggle Theme'>{icon}</div>
+""", unsafe_allow_html=True)
 
-
-st.set_page_config(page_title="🖥️ Frontend Viewer", layout="wide")
-st.title("🖥️ Filings & Insights — End User View")
+# =============================
+# HEADER
+# =============================
+st.markdown("""
+<div class='landing-container'>
+    <h1>🖥️ Filings & Insights — End User View</h1>
+    <p>Search, explore, and review the latest company filings and summaries in a clean interface.</p>
+</div>
+""", unsafe_allow_html=True)
 
 # ==========================================================
-# Section 1: View Latest Filing
+# SECTION 1: FETCH LATEST FILING
 # ==========================================================
 st.header("📰 Fetch & View Latest Filing")
 
-company_name = st.text_input("Enter Company Name")
-ticker = st.text_input("Enter Ticker Symbol (e.g., AAPL, MSFT)").upper().strip()
+col1, col2 = st.columns(2)
+with col1:
+    company_name = st.text_input("Enter Company Name")
+with col2:
+    ticker = st.text_input("Enter Ticker Symbol (e.g., AAPL, MSFT)").upper().strip()
 
-if st.button("Fetch Latest Filing"):
+if st.button("🔍 Fetch Latest Filing"):
     if not company_name or not ticker:
         st.warning("Please provide both company name and ticker.")
     else:
@@ -52,7 +77,11 @@ if st.button("Fetch Latest Filing"):
                 """, unsafe_allow_html=True)
 
                 st.subheader("📜 Extracted Filing Text (Preview)")
-                st.write(filing_data['filing_text'][:2000] + "..." if filing_data['filing_text'] else "No text extracted.")
+                filing_text = filing_data.get("filing_text", "")
+                if filing_text:
+                    st.write(filing_text[:2000] + "..." if len(filing_text) > 2000 else filing_text)
+                else:
+                    st.info("No text extracted.")
 
                 # Save filing to Supabase
                 supabase.table("filings_history").insert({
@@ -60,13 +89,13 @@ if st.button("Fetch Latest Filing"):
                     "company_name": company_name,
                     "event_type": "earning",
                     "expected_date": datetime.now().isoformat(),
-                    "filing_url": filing_data["filing_url"],
-                    "filing_title": filing_data["filing_title"],
-                    "filing_summary": filing_data["filing_summary"],
-                    "filing_text": filing_data["filing_text"],
+                    "filing_url": filing_data.get("filing_url"),
+                    "filing_title": filing_data.get("filing_title"),
+                    "filing_summary": filing_data.get("filing_summary"),
+                    "filing_text": filing_text,
                     "classification_label": None,
                     "classification_score": None,
-                    "fetched_from": filing_data["fetched_from"],
+                    "fetched_from": filing_data.get("fetched_from"),
                     "run_timestamp": datetime.now().isoformat(),
                     "notes": None,
                 }).execute()
@@ -76,7 +105,7 @@ if st.button("Fetch Latest Filing"):
                 st.error("No recent filing found for this company.")
 
 # ==========================================================
-# Section 2: View Filing History
+# SECTION 2: VIEW FILING HISTORY
 # ==========================================================
 st.header("📜 Recent Filings History")
 
@@ -88,15 +117,16 @@ try:
         .limit(50)
         .execute()
     )
+
     history_data = history.data or []
     if history_data:
         for row in history_data:
             st.markdown(f"""
             <div class="filing-card">
-                <div class="filing-title">{row['filing_title']}</div>
-                <p class="filing-meta"><strong>{row['company_name']}</strong> ({row['ticker']}) — {row['event_type']}</p>
-                <p>{row['filing_summary'][:250] if row['filing_summary'] else ''}...</p>
-                <a href="{row['filing_url']}" target="_blank">🔗 View Filing</a>
+                <div class="filing-title">{row.get('filing_title', 'Untitled Filing')}</div>
+                <p class="filing-meta"><strong>{row.get('company_name', '')}</strong> ({row.get('ticker', '')}) — {row.get('event_type', '')}</p>
+                <p>{(row.get('filing_summary') or '')[:250]}...</p>
+                <a href="{row.get('filing_url', '#')}" target="_blank">🔗 View Filing</a>
             </div>
             """, unsafe_allow_html=True)
     else:
