@@ -12,11 +12,22 @@ with open("assets/style.css") as f:
 # === PAGE CONFIG ===
 st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
 st.title("🧭 Company Insights Viewer")
-st.markdown("Explore company fundamentals, filings, and global financial news in a friendly, visual format.")
+st.markdown("Explore company fundamentals, filings, and financial news in a clean, elegant format.")
 
 # === INPUT SECTION ===
 st.divider()
 ticker = st.text_input("🔍 Enter Company Ticker or Name (e.g. AAPL, TSLA, MTN):").strip()
+
+# === Default Metrics ===
+DEFAULT_METRICS = [
+    "valuation",
+    "profitability",
+    "growth",
+    "balance",
+    "cashflow",
+    "dividends",
+    "recommendations",
+]
 
 # =====================================================================
 # MAIN LOGIC
@@ -28,25 +39,39 @@ if ticker:
         # --------------------------------------------------------------
         st.header("📊 Fundamental Analysis")
         with st.spinner("Fetching and analyzing fundamentals..."):
-            fundamentals = analyze_ticker(ticker)
+            fundamentals = analyze_ticker(ticker, DEFAULT_METRICS)
 
         if fundamentals:
             st.success("✅ Analysis fetched successfully!")
+
+            # Display main summary metrics
+            key_metrics = fundamentals.get("valuation", {})
             col1, col2, col3 = st.columns(3)
-            col1.metric("Market Cap", fundamentals.get("market_cap", "N/A"))
-            col2.metric("P/E Ratio", fundamentals.get("pe_ratio", "N/A"))
-            col3.metric("Dividend Yield", fundamentals.get("dividend_yield", "N/A"))
+            col1.metric("Market Cap", key_metrics.get("market_cap", "N/A"))
+            col2.metric("P/E Ratio", key_metrics.get("pe_ratio", "N/A"))
+            col3.metric("Dividend Yield", key_metrics.get("dividend_yield", "N/A"))
 
             st.markdown("### 📈 Performance Overview")
             perf_cols = st.columns(2)
             with perf_cols[0]:
-                st.markdown(f"**Sector:** {fundamentals.get('sector', 'N/A')}")
-                st.markdown(f"**52 Week Range:** {fundamentals.get('52_week_range', 'N/A')}")
-                st.markdown(f"**Beta:** {fundamentals.get('beta', 'N/A')}")
+                st.markdown(f"**Sector:** {key_metrics.get('sector', 'N/A')}")
+                st.markdown(f"**52 Week Range:** {key_metrics.get('52_week_range', 'N/A')}")
+                st.markdown(f"**Beta:** {key_metrics.get('beta', 'N/A')}")
             with perf_cols[1]:
-                st.markdown(f"**Recommendation:** {fundamentals.get('recommendation', 'N/A')}")
-                st.markdown(f"**Growth Score:** {fundamentals.get('growth_score', 'N/A')}")
-                st.markdown(f"**Profitability:** {fundamentals.get('profitability', 'N/A')}")
+                st.markdown(f"**Recommendation:** {key_metrics.get('recommendation', 'N/A')}")
+                st.markdown(f"**Growth Score:** {fundamentals.get('growth', {}).get('growth_score', 'N/A')}")
+                st.markdown(f"**Profitability:** {fundamentals.get('profitability', {}).get('profit_margin', 'N/A')}")
+
+            # Tabs for detailed metrics
+            st.markdown("### 📊 Detailed Metrics")
+            tabs = st.tabs(DEFAULT_METRICS)
+            for i, metric in enumerate(DEFAULT_METRICS):
+                with tabs[i]:
+                    metric_data = fundamentals.get(metric, {})
+                    if metric_data:
+                        st.json(metric_data)
+                    else:
+                        st.info("No data available for this metric.")
         else:
             st.warning("⚠️ No fundamentals found for this company.")
 
