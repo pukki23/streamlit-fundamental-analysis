@@ -1,72 +1,84 @@
-/* ---------- Global Styling ---------- */
-body {
-    background-color: #f9fafc;
-    color: #333;
+/* === Global Layout === */
+body, [class*="stApp"] {
+    background-color: #f8f9fb;
+    color: #222;
     font-family: "Inter", sans-serif;
 }
 
-h1, h2, h3 {
+/* === Section Headers === */
+h1, h2, h3, h4 {
+    color: #1a1a1a;
+}
+
+/* === Metric Cards === */
+.metric-card {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    margin-bottom: 12px;
+    text-align: center;
+}
+
+.metric-key {
+    font-weight: 600;
+    color: #555;
+    font-size: 0.95em;
+}
+
+.metric-value {
+    font-size: 1.25em;
     font-weight: 700;
-    color: #222;
+    color: #0066cc;
 }
 
-/* ---------- Landing Container ---------- */
-.landing-container {
-    text-align: center;
-    padding: 3rem 1rem 2rem 1rem;
+/* === Filing Cards === */
+.filing-card {
+    background: #ffffff;
+    padding: 18px;
+    border-left: 4px solid #0066cc;
+    border-radius: 10px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
-.landing-container h1 {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
-    color: #0a2540;
+.filing-title {
+    font-weight: 700;
+    font-size: 1.1em;
+    margin-bottom: 4px;
+    color: #004080;
 }
 
-.landing-container p {
-    color: #555;
-    font-size: 1.1rem;
+.filing-meta {
+    font-size: 0.9em;
+    color: #666;
 }
 
-/* ---------- Navigation Cards ---------- */
-.card-container {
-    display: flex;
-    justify-content: center;
-    gap: 2rem;
-    flex-wrap: wrap;
-    margin-top: 2rem;
+/* === News Cards === */
+.news-card {
+    background: #fff;
+    border-radius: 12px;
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 }
 
-.nav-card {
-    background-color: #ffffff;
-    border-radius: 16px;
-    padding: 2rem;
-    width: 280px;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
-    transition: all 0.25s ease-in-out;
-    text-align: center;
+.news-card h4 {
+    margin-top: 0;
+    color: #333;
+}
+
+.news-card a {
+    color: #0066cc;
+    font-weight: 600;
     text-decoration: none;
-    color: inherit;
-    border: 1px solid #eee;
 }
 
-.nav-card:hover {
-    transform: translateY(-6px);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
-    border-color: #0084ff;
+.news-card a:hover {
+    text-decoration: underline;
 }
 
-.nav-card h3 {
-    margin-bottom: 0.8rem;
-    font-size: 1.3rem;
-    color: #0a2540;
-}
-
-.nav-card p {
-    color: #555;
-    font-size: 0.95rem;
-}
-
-.nav-card .icon {
-    font-size: 2.5rem;
-    margin-bottom: 0.5rem;
+.news-meta {
+    font-size: 0.8em;
+    color: #777;
 }
