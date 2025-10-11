@@ -1,105 +1,72 @@
-/* === Global Light Theme === */
+/* ---------- Global Styling ---------- */
 body {
     background-color: #f9fafc;
-    color: #1f2937;
-    font-family: 'Inter', sans-serif;
+    color: #333;
+    font-family: "Inter", sans-serif;
 }
 
-.main-title {
-    font-size: 2.2rem;
+h1, h2, h3 {
     font-weight: 700;
-    color: #1e3a8a;
+    color: #222;
+}
+
+/* ---------- Landing Container ---------- */
+.landing-container {
+    text-align: center;
+    padding: 3rem 1rem 2rem 1rem;
+}
+
+.landing-container h1 {
+    font-size: 2.5rem;
     margin-bottom: 0.5rem;
+    color: #0a2540;
 }
 
-.subtitle {
+.landing-container p {
+    color: #555;
     font-size: 1.1rem;
-    color: #475569;
-    margin-bottom: 2rem;
 }
 
-/* === Welcome Card === */
-.welcome-card {
-    background: linear-gradient(135deg, #e0e7ff, #c7d2fe);
-    border-radius: 1rem;
-    padding: 1.5rem;
-    color: #1e293b;
-    margin-bottom: 2rem;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+/* ---------- Navigation Cards ---------- */
+.card-container {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    flex-wrap: wrap;
+    margin-top: 2rem;
 }
 
-/* === Navigation Cards === */
 .nav-card {
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 1rem;
-    padding: 1.5rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
-    text-align: left;
+    background-color: #ffffff;
+    border-radius: 16px;
+    padding: 2rem;
+    width: 280px;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    transition: all 0.25s ease-in-out;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    border: 1px solid #eee;
+}
+
+.nav-card:hover {
+    transform: translateY(-6px);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    border-color: #0084ff;
 }
 
 .nav-card h3 {
-    color: #1e3a8a;
-    font-size: 1.4rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.8rem;
+    font-size: 1.3rem;
+    color: #0a2540;
 }
 
 .nav-card p {
-    color: #334155;
+    color: #555;
     font-size: 0.95rem;
-    margin-bottom: 1rem;
 }
 
-.nav-button {
-    display: inline-block;
-    padding: 0.6rem 1.2rem;
-    background-color: #1d4ed8;
-    color: #ffffff;
-    border-radius: 0.5rem;
-    text-decoration: none;
-    font-weight: 500;
-    transition: background-color 0.2s ease-in-out;
-}
-
-.nav-button:hover {
-    background-color: #1e40af;
-}
-
-/* === Filings Cards (used in Frontend) === */
-.filing-card {
-    background-color: #ffffff;
-    border-radius: 1rem;
-    padding: 1rem 1.5rem;
-    margin-bottom: 1rem;
-    border: 1px solid #e2e8f0;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.03);
-}
-
-.filing-title {
-    font-size: 1.1rem;
-    font-weight: 600;
-    color: #1e3a8a;
-    margin-bottom: 0.4rem;
-}
-
-.filing-meta {
-    font-size: 0.9rem;
-    color: #475569;
-    margin-bottom: 0.6rem;
-}
-
-/* === Footer === */
-.footer {
-    text-align: center;
-    color: #64748b;
-    font-size: 0.85rem;
-    padding: 1rem 0;
-}
-
-.divider {
-    margin-top: 2rem;
+.nav-card .icon {
+    font-size: 2.5rem;
     margin-bottom: 0.5rem;
-    border: 0;
-    border-top: 1px solid #e2e8f0;
 }
