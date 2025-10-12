@@ -1,154 +1,69 @@
-/* === Global Layout === */
-body, .stApp {
-    background-color: #ffffff !important;
-    color: #222222 !important;
-    font-family: 'Segoe UI', 'Roboto', sans-serif;
-}
-
-/* === Page Titles & Headers === */
-h1, h2, h3, h4 {
-    color: #b71c1c !important; /* deep red for contrast */
-    text-align: center;
-}
-
-.subtitle {
-    font-size: 1.1rem;
-    text-align: center;
-    color: #333333 !important;
-    margin-bottom: 20px;
-}
-
-/* === Form Labels === */
-label, .stTextInput label, .stTextInput div p {
-    color: #111111 !important;
-    font-weight: 600;
-    font-size: 1rem;
-    margin-bottom: 5px !important;
-    display: block;
-}
-
-/* === Input Fields === */
-.stTextInput input {
-    color: #000000 !important;
-    background-color: #ffffff !important;
-    border: 1.5px solid #bdbdbd !important;
-    border-radius: 8px !important;
-    padding: 8px 10px !important;
-    width: 100%;
-    transition: all 0.2s ease-in-out;
-}
-.stTextInput input:focus {
-    border-color: #b71c1c !important;
-    box-shadow: 0 0 6px rgba(183, 28, 28, 0.3) !important;
-    outline: none !important;
-}
-
-/* === Form Field Spacing === */
-.css-1dp5vir, .stTextInput {
-    margin-bottom: 20px !important;
-}
-
-/* === Metrics Section === */
-[data-testid="stMetricValue"] {
-    color: #222 !important;
-    font-weight: bold;
-    font-size: 1.1rem;
-}
-[data-testid="stMetricLabel"] {
-    color: #444 !important;
-}
-
-/* === Expanders (Cards) === */
-div[data-testid="stExpander"] {
-    background-color: #fff !important;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    padding: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    margin-bottom: 10px;
-}
-div[data-testid="stExpander"] p, 
-div[data-testid="stExpander"] span {
-    color: #222 !important;
-}
-
-/* === Scrollable Sections === */
-.scrollable-section {
-    max-height: 350px;
-    overflow-y: auto;
-    padding: 10px;
-}
-
-/* === News Cards === */
-.news-card {
-    background: #f8f8f8;
-    border-radius: 10px;
-    padding: 14px;
-    margin-bottom: 12px;
-    border: 1px solid #ddd;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-}
-.news-card b {
-    color: #111 !important;
-    font-size: 1rem;
-}
-.news-card i {
-    color: #555 !important;
-    font-size: 0.9rem;
-}
-
-/* === Links === */
-a {
-    color: #1565c0 !important;
-    text-decoration: none;
+/* General text visibility */
+body, .stMarkdown, .stTextInput label, .stSelectbox label {
+    color: #1a1a1a !important;
     font-weight: 500;
 }
-a:hover {
-    text-decoration: underline;
-}
 
-/* === Section Titles === */
-.stSubheader, .stMarkdown h2, .stMarkdown h3 {
-    color: #b71c1c !important;
-    margin-top: 25px;
-    margin-bottom: 15px;
-}
-
-/* === Buttons === */
-.stButton>button {
-    background-color: #b71c1c !important;
+/* Fetch button - better contrast */
+button[kind="primary"] {
+    background-color: #1a73e8 !important;
     color: white !important;
     font-weight: 600;
-    border: none;
-    border-radius: 6px;
-    padding: 8px 20px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
-}
-.stButton>button:hover {
-    background-color: #a31515 !important;
+    border-radius: 10px;
+    padding: 0.6em 1.2em;
 }
 
-/* === Center content === */
-.main .block-container {
-    max-width: 850px !important;
-    margin: 0 auto !important;
+/* Dimmed overlay when spinner shows */
+.dimmed-background {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(0, 0, 0, 0.45);
+    z-index: 998;
 }
 
-body, .stApp {
-  background-color: #fff !important;
-  color: #222 !important;
+/* Large spinner */
+div[data-testid="stSpinner"] {
+    font-size: 1.8em !important;
+    font-weight: 700;
+    color: #ffffff !important;
+    z-index: 999 !important;
+    text-align: center !important;
+    padding-top: 30vh;
 }
-h1, h2, h3, h4, label, p, span {
-  color: #222 !important;
+
+/* Smooth fade-in animation */
+.fade-in-results {
+    animation: fadeSlideIn 1.2s ease-in-out forwards;
+    opacity: 0;
+    transform: translateY(20px);
 }
-button, .stButton>button {
-  background-color: #0078ff !important;
-  color: white !important;
-  border-radius: 8px;
+
+@keyframes fadeSlideIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
-.scrollable-section {
-  max-height: 350px;
-  overflow-y: scroll;
-  padding-right: 8px;
+
+/* Metric section style */
+.block-container {
+    padding-top: 1rem;
+}
+
+.stExpander {
+    background-color: #f7f9fc !important;
+    border-radius: 12px !important;
+    border: 1px solid #e0e0e0 !important;
+    transition: all 0.3s ease-in-out;
+}
+
+.stExpander:hover {
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+}
+
+/* Center titles */
+h1, h2, h3, h4 {
+    color: #222 !important;
+    text-align: center;
 }
