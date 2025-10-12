@@ -31,12 +31,10 @@ if company_input and not ticker_input:
     match = next((c["ticker"] for c in companies if c["company_name"].lower() == company_input.lower()), "")
     if match:
         ticker_input = match
-        st.session_state["ticker_input"] = match
 elif ticker_input and not company_input:
     match = next((c["company_name"] for c in companies if c["ticker"].lower() == ticker_input.lower()), "")
     if match:
         company_input = match
-        st.session_state["company_input"] = match
 
 # -------- Sidebar controls --------
 st.sidebar.header("📊 Configuration")
@@ -86,17 +84,20 @@ if fetch_button and company_input:
     company_name = company_input.strip()
     ticker = ticker_input.strip().upper()
 
+    # Dimmed overlay + spinner
     st.markdown('<div class="dimmed-background"></div>', unsafe_allow_html=True)
     with st.spinner("🚀 Fetching insights... Please wait"):
         if not recent_record_exists("fundamentals", ticker):
             analyze_ticker(ticker, selected_metrics)
-
         push_news(ticker, company_name)
 
     st.success("✅ Complete")
 
     company = get_company_record(ticker)
     company_id = company.get("id") if company else None
+
+    # Animated container for fade-in
+    st.markdown('<div class="fade-in-results">', unsafe_allow_html=True)
 
     # ---- METRICS SECTION ----
     st.subheader("📊 Selected Metrics")
@@ -159,5 +160,6 @@ if fetch_button and company_input:
     else:
         st.info("No recent news found.")
 
+    st.markdown("</div>", unsafe_allow_html=True)  # close fade-in div
 else:
     st.info("Enter a company name and click **Fetch Insights** to display information.")
