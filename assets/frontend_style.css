@@ -134,3 +134,21 @@ a:hover {
     max-width: 850px !important;
     margin: 0 auto !important;
 }
+
+body, .stApp {
+  background-color: #fff !important;
+  color: #222 !important;
+}
+h1, h2, h3, h4, label, p, span {
+  color: #222 !important;
+}
+button, .stButton>button {
+  background-color: #0078ff !important;
+  color: white !important;
+  border-radius: 8px;
+}
+.scrollable-section {
+  max-height: 350px;
+  overflow-y: scroll;
+  padding-right: 8px;
+}
