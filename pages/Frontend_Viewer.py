@@ -20,11 +20,13 @@ company_names = [c["company_name"] for c in companies if c.get("company_name")]
 tickers = [c["ticker"] for c in companies if c.get("ticker")]
 
 # -------- User Input Section --------
+st.markdown('<div class="center-container">', unsafe_allow_html=True)
 col1, col2 = st.columns([2, 1])
 with col1:
     company_input = st.text_input("🏢 Company Name (e.g. Apple, Tesla, MTN):", "")
 with col2:
     ticker_input = st.text_input("🔠 Ticker (optional):", "")
+st.markdown('</div>', unsafe_allow_html=True)
 
 # --- Autofill logic (case-insensitive) ---
 if company_input and not ticker_input:
@@ -43,7 +45,14 @@ metrics_options = [
     "balance", "cashflow", "dividends", "recommendations",
 ]
 selected_metrics = st.sidebar.multiselect("Select Metrics", metrics_options, default=["recommendations"])
-fetch_button = st.sidebar.button("📡 Fetch Insights")
+fetch_button_sidebar = st.sidebar.button("📡 Fetch Insights")
+
+# --- Centered Fetch Button on Main Page ---
+fetch_button_main = st.button("📡 Fetch Insights", key="main_fetch", use_container_width=True)
+
+# Merge button logic
+fetch_triggered = fetch_button_sidebar or fetch_button_main
+
 
 # -------- Helper Functions --------
 def get_company_record(ticker):
@@ -61,13 +70,10 @@ def get_table_rows(table, company_id=None, ticker=None):
         return []
     return res.data or []
 
-def display_dict_side_by_side(data_dict):
-    if not data_dict:
-        return
-    col1, col2 = st.columns(2)
-    for i, (k, v) in enumerate(data_dict.items()):
-        target = col1 if i % 2 == 0 else col2
-        target.markdown(f"**{k}:** {v}")
+def display_dict_pretty(data_dict):
+    """Displays key-value pairs inside styled cards."""
+    for k, v in data_dict.items():
+        st.markdown(f"<div class='metric-item'><b>{k}:</b> {v}</div>", unsafe_allow_html=True)
 
 def recent_record_exists(table, ticker):
     try:
@@ -79,24 +85,32 @@ def recent_record_exists(table, ticker):
     except Exception:
         return False
 
+
 # ----------- MAIN LOGIC ------------
-if fetch_button and company_input:
+if fetch_triggered and company_input:
     company_name = company_input.strip()
     ticker = ticker_input.strip().upper()
 
     # Dimmed overlay + spinner
-    st.markdown('<div class="dimmed-background"></div>', unsafe_allow_html=True)
-    with st.spinner("🚀 Fetching insights... Please wait"):
-        if not recent_record_exists("fundamentals", ticker):
-            analyze_ticker(ticker, selected_metrics)
-        push_news(ticker, company_name)
+    spinner_html = """
+    <div class="dim-overlay" id="dim-overlay">
+        <div class="big-spinner">🚀 Fetching insights... Please wait</div>
+    </div>
+    """
+    st.markdown(spinner_html, unsafe_allow_html=True)
 
-    st.success("✅ Complete")
+    if not recent_record_exists("fundamentals", ticker):
+        analyze_ticker(ticker, selected_metrics)
+    push_news(ticker, company_name)
+
+    # Hide overlay
+    st.markdown("<script>document.getElementById('dim-overlay').remove();</script>", unsafe_allow_html=True)
+    st.markdown("<div class='complete-box'>✅ Complete</div>", unsafe_allow_html=True)
 
     company = get_company_record(ticker)
     company_id = company.get("id") if company else None
 
-    # Animated container for fade-in
+    # Animated container
     st.markdown('<div class="fade-in-results">', unsafe_allow_html=True)
 
     # ---- METRICS SECTION ----
@@ -115,10 +129,11 @@ if fetch_button and company_input:
                 for k, v in row.items()
                 if k not in ("id", "created_at", "updated_at", "uniquekey", "unique_key", "company_id")
             }
-            st.markdown(f"#### {metric.title()}")
-            display_dict_side_by_side(pretty)
+            st.markdown(f"<div class='metric-card'><h4>{metric.title()}</h4>", unsafe_allow_html=True)
+            display_dict_pretty(pretty)
+            st.markdown("</div>", unsafe_allow_html=True)
 
-    # ---- RECOMMENDATIONS SECTION ----
+    # ---- RECOMMENDATIONS ----
     if "recommendations" in selected_metrics:
         rec_rows = get_table_rows("recommendations", company_id, ticker)
         if rec_rows:
@@ -130,9 +145,11 @@ if fetch_button and company_input:
                     pretty = {
                         k.replace("_", " ").title(): v
                         for k, v in rec.items()
-                        if k not in ("id", "created_at", "updated_at", "uniquekey", "unique_key")
+                        if k not in ("id", "created_at", "updated_at", "uniquekey", "unique_key", "company_id")
                     }
-                    display_dict_side_by_side(pretty)
+                    st.markdown("<div class='recommend-card'>", unsafe_allow_html=True)
+                    display_dict_pretty(pretty)
+                    st.markdown("</div>", unsafe_allow_html=True)
 
     # ---- FILINGS ----
     st.subheader("📂 Upcoming Filings")
@@ -160,6 +177,6 @@ if fetch_button and company_input:
     else:
         st.info("No recent news found.")
 
-    st.markdown("</div>", unsafe_allow_html=True)  # close fade-in div
+    st.markdown("</div>", unsafe_allow_html=True)
 else:
     st.info("Enter a company name and click **Fetch Insights** to display information.")
