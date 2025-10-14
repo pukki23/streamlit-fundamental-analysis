@@ -1,4 +1,4 @@
-/* Centered search boxes */
+/* Center and size adjustments for input fields */
 .center-container {
     display: flex;
     justify-content: center;
@@ -7,19 +7,18 @@
     margin-bottom: 1.5rem;
 }
 
-/* Smaller input fields */
 input[type="text"] {
     width: 75% !important;
     font-size: 0.9rem !important;
 }
 
-/* Main Fetch Button */
+/* Fetch Button */
 .stButton>button {
     background-color: #1e88e5 !important;
     color: white !important;
     font-weight: 600;
-    font-size: 1.1rem;
-    padding: 0.7rem 1.5rem;
+    font-size: 1rem;
+    padding: 0.6rem 1.2rem;
     border-radius: 10px;
     border: none;
     transition: all 0.3s ease;
@@ -28,36 +27,17 @@ input[type="text"] {
     background-color: #1565c0 !important;
 }
 
-/* Dim Overlay for Spinner */
-.dim-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    background: rgba(0, 0, 0, 0.75);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 999;
-}
-
-.big-spinner {
-    font-size: 2rem;
-    color: white;
-    font-weight: 600;
-}
-
-/* Complete Message */
+/* Smaller, centered Complete box */
 .complete-box {
     background: #d4edda;
     color: #155724;
     text-align: center;
     font-weight: bold;
-    padding: 0.5rem 1rem;
+    padding: 0.4rem 1rem;
     border-radius: 8px;
     margin: 1rem auto;
     width: 25%;
+    font-size: 0.9rem;
 }
 
 /* Metric Containers */
