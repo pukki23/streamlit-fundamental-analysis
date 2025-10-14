@@ -91,20 +91,12 @@ if fetch_triggered and company_input:
     company_name = company_input.strip()
     ticker = ticker_input.strip().upper()
 
-    # Dimmed overlay + spinner
-    spinner_html = """
-    <div class="dim-overlay" id="dim-overlay">
-        <div class="big-spinner">🚀 Fetching insights... Please wait</div>
-    </div>
-    """
-    st.markdown(spinner_html, unsafe_allow_html=True)
+    # Streamlit native spinner (no overlay)
+    with st.spinner("🚀 Fetching insights... Please wait"):
+        if not recent_record_exists("fundamentals", ticker):
+            analyze_ticker(ticker, selected_metrics)
+        push_news(ticker, company_name)
 
-    if not recent_record_exists("fundamentals", ticker):
-        analyze_ticker(ticker, selected_metrics)
-    push_news(ticker, company_name)
-
-    # Hide overlay
-    st.markdown("<script>document.getElementById('dim-overlay').remove();</script>", unsafe_allow_html=True)
     st.markdown("<div class='complete-box'>✅ Complete</div>", unsafe_allow_html=True)
 
     company = get_company_record(ticker)
@@ -172,7 +164,7 @@ if fetch_triggered and company_input:
     if news_list:
         for item in news_list[:6]:
             with st.expander(f"🗞️ {item.get('title','(no title)')}"):
-                st.markdown(f"**Summary:** {item.get('summary','N/A')}")
+                st.markdown(f"**Summary:** {item.get('summary','N/A')}") 
                 st.markdown(f"[🔗 Source Link]({item.get('link','#')})", unsafe_allow_html=True)
     else:
         st.info("No recent news found.")
