@@ -5,21 +5,21 @@ from supabase_client import supabase
 from scripts.analysis_module import analyze_ticker
 from scripts.euronews_module import push_news
 
+# --- Page Config ---
+st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
+st.title("🧭 Company Insights Viewer")
+
 # --- Load CSS ---
 with open("assets/frontend_style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
-st.title("🧭 Company Insights Viewer")
-
-# -------- Fetch companies for autofill --------
+# --- Load companies for autofill ---
 companies_resp = supabase.table("companies").select("id, ticker, company_name, sector, industry, currency, country").execute()
 companies = companies_resp.data or []
-
 company_names = [c["company_name"] for c in companies if c.get("company_name")]
 tickers = [c["ticker"] for c in companies if c.get("ticker")]
 
-# -------- User Input Section --------
+# --- Input fields ---
 st.markdown('<div class="center-container">', unsafe_allow_html=True)
 col1, col2 = st.columns([2, 1])
 with col1:
@@ -28,7 +28,7 @@ with col2:
     ticker_input = st.text_input("🔠 Ticker (optional):", "")
 st.markdown('</div>', unsafe_allow_html=True)
 
-# --- Autofill logic (case-insensitive) ---
+# Autofill logic
 if company_input and not ticker_input:
     match = next((c["ticker"] for c in companies if c["company_name"].lower() == company_input.lower()), "")
     if match:
@@ -38,7 +38,7 @@ elif ticker_input and not company_input:
     if match:
         company_input = match
 
-# -------- Sidebar controls --------
+# --- Sidebar configuration ---
 st.sidebar.header("📊 Configuration")
 metrics_options = [
     "valuation", "profitability", "growth",
@@ -46,11 +46,7 @@ metrics_options = [
 ]
 selected_metrics = st.sidebar.multiselect("Select Metrics", metrics_options, default=["companies"])
 fetch_button_sidebar = st.sidebar.button("📡 Fetch Insights")
-
-# --- Centered Fetch Button on Main Page ---
 fetch_button_main = st.button("📡 Fetch Insights", key="main_fetch", use_container_width=True)
-
-# Merge button logic
 fetch_triggered = fetch_button_sidebar or fetch_button_main
 
 
@@ -65,7 +61,6 @@ def get_company_record(ticker):
 def get_table_rows(table, company_id=None, ticker=None):
     """Fetch table rows based on either company_id or ticker"""
     if table == "companies":
-        # For companies, only fetch for selected ticker/company name
         if ticker:
             res = supabase.table("companies").select("*").ilike("ticker", ticker).execute()
         else:
@@ -80,13 +75,11 @@ def get_table_rows(table, company_id=None, ticker=None):
 
 
 def display_dict_pretty(data_dict):
-    """Display dictionary key/value pairs in a styled block"""
     for k, v in data_dict.items():
         st.markdown(f"<div class='metric-item'><b>{k}:</b> {v}</div>", unsafe_allow_html=True)
 
 
 def recent_record_exists(table, ticker):
-    """Check if a record for this ticker exists within the last 24 hours"""
     try:
         res = supabase.table(table).select("run_timestamp").ilike("ticker", ticker).order("run_timestamp", desc=True).limit(1).execute()
         if not res.data:
@@ -97,32 +90,10 @@ def recent_record_exists(table, ticker):
         return False
 
 
-# ----------- MAIN LOGIC ------------
+# -------- Main Display Logic --------
 if fetch_triggered and company_input:
     company_name = company_input.strip()
     ticker = ticker_input.strip().upper()
-
-    # Spinner only (no overlay)
-    spinner_html = """
-    <div style='display: flex; justify-content: center; align-items: center; height: 200px;'>
-        <div class="loader"></div>
-        <style>
-        .loader {
-            border: 10px solid #f3f3f3;
-            border-top: 10px solid #3498db;
-            border-radius: 50%;
-            width: 120px;
-            height: 120px;
-            animation: spin 1s linear infinite;
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        </style>
-    </div>
-    """
-    st.markdown(spinner_html, unsafe_allow_html=True)
 
     # Fetch or trigger analysis
     if not recent_record_exists("fundamentals", ticker):
@@ -134,7 +105,6 @@ if fetch_triggered and company_input:
     company = get_company_record(ticker)
     company_id = company.get("id") if company else None
 
-    # Animated container
     st.markdown('<div class="fade-in-results">', unsafe_allow_html=True)
 
     # ---- COMPANY CARD ----
@@ -166,8 +136,7 @@ if fetch_triggered and company_input:
     # ---- METRICS SECTION ----
     if selected_metrics:
         st.subheader("📊 Selected Metrics")
-
-        cols = st.columns(len(selected_metrics)) if selected_metrics else []
+        cols = st.columns(len(selected_metrics))
         for idx, metric in enumerate(selected_metrics):
             with cols[idx]:
                 rows = get_table_rows(metric, company_id, ticker)
@@ -185,7 +154,7 @@ if fetch_triggered and company_input:
                 st.markdown("</div>", unsafe_allow_html=True)
 
     # ---- RECOMMENDATIONS ----
-    if "recommendations" in metrics_options:
+    if "recommendations" in selected_metrics:
         rec_rows = get_table_rows("recommendations", company_id, ticker)
         if rec_rows:
             st.subheader("💬 Analyst Recommendations")
