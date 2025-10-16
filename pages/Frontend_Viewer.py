@@ -42,9 +42,9 @@ elif ticker_input and not company_input:
 st.sidebar.header("📊 Configuration")
 metrics_options = [
     "valuation", "profitability", "growth",
-    "balance", "cashflow", "dividends", "recommendations",
+    "balance", "cashflow", "dividends", "recommendations", "companies"
 ]
-selected_metrics = st.sidebar.multiselect("Select Metrics", metrics_options, default=["recommendations"])
+selected_metrics = st.sidebar.multiselect("Select Metrics", metrics_options, default=["companies"])
 fetch_button_sidebar = st.sidebar.button("📡 Fetch Insights")
 
 # --- Centered Fetch Button on Main Page ---
@@ -174,6 +174,7 @@ if fetch_triggered and company_input:
             with st.expander(f"🗞️ {item.get('title','(no title)')}"):
                 st.markdown(f"**Summary:** {item.get('summary','N/A')}")
                 st.markdown(f"[🔗 Source Link]({item.get('link','#')})", unsafe_allow_html=True)
+                st.markdown(f"**Published Date** {item.get('published','N/A')}")
     else:
         st.info("No recent news found.")
 
