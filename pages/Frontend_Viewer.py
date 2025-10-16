@@ -13,7 +13,7 @@ st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
 st.title("🧭 Company Insights Viewer")
 
 # -------- Fetch companies for autofill --------
-companies_resp = supabase.table("companies").select("id, ticker, company_name").execute()
+companies_resp = supabase.table("companies").select("id, ticker, company_name, sector, industry").execute()
 companies = companies_resp.data or []
 
 company_names = [c["company_name"] for c in companies if c.get("company_name")]
@@ -62,7 +62,9 @@ def get_company_record(ticker):
     return res.data[0] if res.data else None
 
 def get_table_rows(table, company_id=None, ticker=None):
-    if company_id:
+    if table == "companies":
+        res = supabase.table("companies").select("*").execute()
+    elif company_id:
         res = supabase.table(table).select("*").eq("company_id", company_id).execute()
     elif ticker:
         res = supabase.table(table).select("*").ilike("ticker", ticker).execute()
@@ -71,7 +73,6 @@ def get_table_rows(table, company_id=None, ticker=None):
     return res.data or []
 
 def display_dict_pretty(data_dict):
-    """Displays key-value pairs inside styled cards."""
     for k, v in data_dict.items():
         st.markdown(f"<div class='metric-item'><b>{k}:</b> {v}</div>", unsafe_allow_html=True)
 
@@ -91,11 +92,9 @@ if fetch_triggered and company_input:
     company_name = company_input.strip()
     ticker = ticker_input.strip().upper()
 
-    # Dimmed overlay + spinner
+    # Spinner
     spinner_html = """
-    <div class="dim-overlay" id="dim-overlay">
-        <div class="big-spinner">🚀 Fetching insights... Please wait</div>
-    </div>
+    <div class="big-spinner">🚀 Fetching insights... Please wait</div>
     """
     st.markdown(spinner_html, unsafe_allow_html=True)
 
@@ -103,8 +102,6 @@ if fetch_triggered and company_input:
         analyze_ticker(ticker, selected_metrics)
     push_news(ticker, company_name)
 
-    # Hide overlay
-    st.markdown("<script>document.getElementById('dim-overlay').remove();</script>", unsafe_allow_html=True)
     st.markdown("<div class='complete-box'>✅ Complete</div>", unsafe_allow_html=True)
 
     company = get_company_record(ticker)
@@ -112,6 +109,31 @@ if fetch_triggered and company_input:
 
     # Animated container
     st.markdown('<div class="fade-in-results">', unsafe_allow_html=True)
+
+    # ---- COMPANIES TABLE (Modern Card Style) ----
+    if "companies" in selected_metrics:
+        st.subheader("🏢 Companies Overview")
+        companies_data = get_table_rows("companies")
+        if companies_data:
+            cols = st.columns(3)
+            for idx, comp in enumerate(companies_data[:9]):  # Display first 9 companies
+                with cols[idx % 3]:
+                    st.markdown("""
+                    <div class='company-card'>
+                        <h4>{company_name}</h4>
+                        <p><b>Ticker:</b> {ticker}</p>
+                        <p><b>Sector:</b> {sector}</p>
+                        <p><b>Industry:</b> {industry}</p>
+                    </div>
+                    """.format(
+                        company_name=comp.get("company_name", "N/A"),
+                        ticker=comp.get("ticker", "N/A"),
+                        sector=comp.get("sector", "N/A"),
+                        industry=comp.get("industry", "N/A")
+                    ), unsafe_allow_html=True)
+        else:
+            st.caption("No companies data available.")
+        selected_metrics = [m for m in selected_metrics if m != "companies"]
 
     # ---- METRICS SECTION ----
     st.subheader("📊 Selected Metrics")
@@ -174,7 +196,7 @@ if fetch_triggered and company_input:
             with st.expander(f"🗞️ {item.get('title','(no title)')}"):
                 st.markdown(f"**Summary:** {item.get('summary','N/A')}")
                 st.markdown(f"[🔗 Source Link]({item.get('link','#')})", unsafe_allow_html=True)
-                st.markdown(f"**Published Date** {item.get('published','N/A')}")
+                st.markdown(f"**Published Date:** {item.get('published','N/A')}")
     else:
         st.info("No recent news found.")
 
