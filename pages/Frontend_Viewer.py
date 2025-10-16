@@ -13,7 +13,7 @@ st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
 st.title("🧭 Company Insights Viewer")
 
 # -------- Fetch companies for autofill --------
-companies_resp = supabase.table("companies").select("id, ticker, company_name, sector, industry, exchange, country").execute()
+companies_resp = supabase.table("companies").select("id, ticker, company_name, sector, industry, currency, country").execute()
 companies = companies_resp.data or []
 
 company_names = [c["company_name"] for c in companies if c.get("company_name")]
