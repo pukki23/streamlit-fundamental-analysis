@@ -13,7 +13,7 @@ st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
 st.title("🧭 Company Insights Viewer")
 
 # -------- Fetch companies for autofill --------
-companies_resp = supabase.table("companies").select("id, ticker, company_name, sector, industry").execute()
+companies_resp = supabase.table("companies").select("id, ticker, company_name, sector, industry, exchange, country").execute()
 companies = companies_resp.data or []
 
 company_names = [c["company_name"] for c in companies if c.get("company_name")]
@@ -61,9 +61,15 @@ def get_company_record(ticker):
     res = supabase.table("companies").select("*").ilike("ticker", ticker).limit(1).execute()
     return res.data[0] if res.data else None
 
+
 def get_table_rows(table, company_id=None, ticker=None):
+    """Fetch table rows based on either company_id or ticker"""
     if table == "companies":
-        res = supabase.table("companies").select("*").execute()
+        # For companies, only fetch for selected ticker/company name
+        if ticker:
+            res = supabase.table("companies").select("*").ilike("ticker", ticker).execute()
+        else:
+            return []
     elif company_id:
         res = supabase.table(table).select("*").eq("company_id", company_id).execute()
     elif ticker:
@@ -72,11 +78,15 @@ def get_table_rows(table, company_id=None, ticker=None):
         return []
     return res.data or []
 
+
 def display_dict_pretty(data_dict):
+    """Display dictionary key/value pairs in a styled block"""
     for k, v in data_dict.items():
         st.markdown(f"<div class='metric-item'><b>{k}:</b> {v}</div>", unsafe_allow_html=True)
 
+
 def recent_record_exists(table, ticker):
+    """Check if a record for this ticker exists within the last 24 hours"""
     try:
         res = supabase.table(table).select("run_timestamp").ilike("ticker", ticker).order("run_timestamp", desc=True).limit(1).execute()
         if not res.data:
@@ -92,12 +102,29 @@ if fetch_triggered and company_input:
     company_name = company_input.strip()
     ticker = ticker_input.strip().upper()
 
-    # Spinner
+    # Spinner only (no overlay)
     spinner_html = """
-    <div class="big-spinner">🚀 Fetching insights... Please wait</div>
+    <div style='display: flex; justify-content: center; align-items: center; height: 200px;'>
+        <div class="loader"></div>
+        <style>
+        .loader {
+            border: 10px solid #f3f3f3;
+            border-top: 10px solid #3498db;
+            border-radius: 50%;
+            width: 120px;
+            height: 120px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        </style>
+    </div>
     """
     st.markdown(spinner_html, unsafe_allow_html=True)
 
+    # Fetch or trigger analysis
     if not recent_record_exists("fundamentals", ticker):
         analyze_ticker(ticker, selected_metrics)
     push_news(ticker, company_name)
@@ -110,60 +137,61 @@ if fetch_triggered and company_input:
     # Animated container
     st.markdown('<div class="fade-in-results">', unsafe_allow_html=True)
 
-    # ---- COMPANIES TABLE (Modern Card Style) ----
+    # ---- COMPANY CARD ----
     if "companies" in selected_metrics:
-        st.subheader("🏢 Companies Overview")
-        companies_data = get_table_rows("companies")
+        st.subheader("🏢 Company Overview")
+
+        companies_data = []
+        if ticker:
+            companies_data = supabase.table("companies").select("*").ilike("ticker", ticker).execute().data or []
+        elif company_name:
+            companies_data = supabase.table("companies").select("*").ilike("company_name", company_name).execute().data or []
+
         if companies_data:
-            cols = st.columns(3)
-            for idx, comp in enumerate(companies_data[:9]):  # Display first 9 companies
-                with cols[idx % 3]:
-                    st.markdown("""
-                    <div class='company-card'>
-                        <h4>{company_name}</h4>
-                        <p><b>Ticker:</b> {ticker}</p>
-                        <p><b>Sector:</b> {sector}</p>
-                        <p><b>Industry:</b> {industry}</p>
-                    </div>
-                    """.format(
-                        company_name=comp.get("company_name", "N/A"),
-                        ticker=comp.get("ticker", "N/A"),
-                        sector=comp.get("sector", "N/A"),
-                        industry=comp.get("industry", "N/A")
-                    ), unsafe_allow_html=True)
+            comp = companies_data[0]
+            st.markdown(f"""
+            <div class='company-card'>
+                <h4>{comp.get('company_name', 'N/A')}</h4>
+                <p><b>Ticker:</b> {comp.get('ticker', 'N/A')}</p>
+                <p><b>Sector:</b> {comp.get('sector', 'N/A')}</p>
+                <p><b>Industry:</b> {comp.get('industry', 'N/A')}</p>
+                <p><b>Country:</b> {comp.get('country', 'N/A')}</p>
+                <p><b>Exchange:</b> {comp.get('exchange', 'N/A')}</p>
+            </div>
+            """, unsafe_allow_html=True)
         else:
-            st.caption("No companies data available.")
+            st.caption(f"No company data found for '{company_name or ticker}'.")
         selected_metrics = [m for m in selected_metrics if m != "companies"]
 
     # ---- METRICS SECTION ----
-    st.subheader("📊 Selected Metrics")
-    cols = st.columns(len(selected_metrics)) if selected_metrics else []
-    for idx, metric in enumerate(selected_metrics):
-        with cols[idx]:
-            table = metric
-            rows = get_table_rows(table, company_id, ticker)
-            if not rows:
-                st.caption(f"No data in '{table}'.")
-                continue
-            row = rows[0]
-            pretty = {
-                k.replace("_", " ").title(): v
-                for k, v in row.items()
-                if k not in ("id", "created_at", "updated_at", "uniquekey", "unique_key", "company_id")
-            }
-            st.markdown(f"<div class='metric-card'><h4>{metric.title()}</h4>", unsafe_allow_html=True)
-            display_dict_pretty(pretty)
-            st.markdown("</div>", unsafe_allow_html=True)
+    if selected_metrics:
+        st.subheader("📊 Selected Metrics")
+
+        cols = st.columns(len(selected_metrics)) if selected_metrics else []
+        for idx, metric in enumerate(selected_metrics):
+            with cols[idx]:
+                rows = get_table_rows(metric, company_id, ticker)
+                if not rows:
+                    st.caption(f"No data in '{metric}'.")
+                    continue
+                row = rows[0]
+                pretty = {
+                    k.replace("_", " ").title(): v
+                    for k, v in row.items()
+                    if k not in ("id", "created_at", "updated_at", "uniquekey", "unique_key", "company_id")
+                }
+                st.markdown(f"<div class='metric-card'><h4>{metric.title()}</h4>", unsafe_allow_html=True)
+                display_dict_pretty(pretty)
+                st.markdown("</div>", unsafe_allow_html=True)
 
     # ---- RECOMMENDATIONS ----
-    if "recommendations" in selected_metrics:
+    if "recommendations" in metrics_options:
         rec_rows = get_table_rows("recommendations", company_id, ticker)
         if rec_rows:
-            st.subheader("💬 Analyst Recommendations (Full Detail)")
+            st.subheader("💬 Analyst Recommendations")
             cols = st.columns(2)
             for i, rec in enumerate(rec_rows[:4]):
-                col = cols[i % 2]
-                with col:
+                with cols[i % 2]:
                     pretty = {
                         k.replace("_", " ").title(): v
                         for k, v in rec.items()
@@ -177,12 +205,13 @@ if fetch_triggered and company_input:
     st.subheader("📂 Upcoming Filings")
     filings = supabase.table("filings").select("*").ilike("ticker", ticker).execute().data or []
     if filings:
-        for f in filings[:2]:
-            with st.expander(f"🗓️ Next Filing Date: {f.get('next_earnings_date', 'N/A')}"):
-                st.markdown(f"**Company:** {f.get('company_name', company_name)}")
-                st.markdown(f"**Source:** {f.get('filing_source','N/A')}")
-                if f.get("filing_link"):
-                    st.markdown(f"[🔗 View Filing]({f['filing_link']})", unsafe_allow_html=True)
+        next_filing = filings[0]
+        st.markdown(f"### 🗓️ Next Filing Date: {next_filing.get('next_earnings_date', 'N/A')}")
+        with st.expander("View Filing Details"):
+            st.markdown(f"**Company:** {next_filing.get('company_name', company_name)}")
+            st.markdown(f"**Source:** {next_filing.get('filing_source','N/A')}")
+            if next_filing.get("filing_link"):
+                st.markdown(f"[🔗 View Filing]({next_filing['filing_link']})", unsafe_allow_html=True)
     else:
         st.info("No upcoming filings found.")
 
@@ -201,5 +230,6 @@ if fetch_triggered and company_input:
         st.info("No recent news found.")
 
     st.markdown("</div>", unsafe_allow_html=True)
+
 else:
     st.info("Enter a company name and click **Fetch Insights** to display information.")
