@@ -1,80 +1,106 @@
-/* Center and size adjustments for input fields */
-.center-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
+/* === Global Layout === */
+body, .stApp {
+  background-color: #f9fafb;
+  color: #111;
+  font-family: 'Inter', sans-serif;
 }
 
+h1, h2, h3, h4 {
+  color: #222;
+  font-weight: 600;
+}
+
+/* === Search Boxes === */
 input[type="text"] {
-    width: 75% !important;
-    font-size: 0.9rem !important;
+  width: 75% !important;  /* smaller width */
+  margin: 0 auto !important;
+  display: block !important;
+  text-align: center;
+  font-size: 0.9rem !important;
+  border: 1px solid #ccc !important;
+  border-radius: 8px !important;
+  padding: 0.4rem 0.6rem !important;
+  background-color: #fff !important;
+  color: #111 !important;
 }
 
-/* Fetch Button */
-.stButton>button {
-    background-color: #1e88e5 !important;
-    color: white !important;
-    font-weight: 600;
-    font-size: 1rem;
-    padding: 0.6rem 1.2rem;
-    border-radius: 10px;
-    border: none;
-    transition: all 0.3s ease;
-}
-.stButton>button:hover {
-    background-color: #1565c0 !important;
-}
-
-/* Smaller, centered Complete box */
-.complete-box {
-    background: #d4edda;
-    color: #155724;
-    text-align: center;
-    font-weight: bold;
-    padding: 0.4rem 1rem;
-    border-radius: 8px;
-    margin: 1rem auto;
-    width: 25%;
-    font-size: 0.9rem;
+/* === Fetch Insights Button === */
+button[kind="secondary"] {
+  display: block !important;
+  margin: 1rem auto !important;
+  background-color: #004aad !important;
+  color: white !important;
+  border: none !important;
+  font-size: 1.2rem !important;
+  font-weight: 600 !important;
+  border-radius: 10px !important;
+  padding: 0.8rem 1.5rem !important;
+  transition: all 0.2s ease-in-out;
 }
 
-/* Metric Containers */
+button[kind="secondary"]:hover {
+  background-color: #2563eb !important;
+}
+
+/* === Spinner === */
+.stSpinner > div {
+  width: 100px !important;
+  height: 100px !important;
+  border-width: 10px !important;
+  border-top-color: #004aad !important;
+  margin: 5rem auto !important;
+}
+
+/* === Success (Complete) Message === */
+.stSuccess {
+  background-color: #e6f9ee !important;
+  color: #065f46 !important;
+  border: 1px solid #6ee7b7 !important;
+  border-radius: 8px !important;
+  padding: 0.4rem 0.6rem !important;
+  width: 75% !important;
+  margin: 0 auto !important;
+  text-align: center !important;
+  font-size: 0.9rem !important;
+  font-weight: 500 !important;
+}
+
+/* === Metric Cards === */
 .metric-card {
-    background: #f9f9f9;
-    border: 1px solid #ddd;
-    border-radius: 12px;
-    padding: 1rem;
-    margin-bottom: 1rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  background-color: white;
+  border-radius: 14px;
+  padding: 1rem 1.5rem;
+  box-shadow: 0px 2px 10px rgba(0,0,0,0.07);
+  margin-bottom: 1.5rem;
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
+
+.metric-card:hover {
+  transform: scale(1.01);
+  box-shadow: 0px 3px 12px rgba(0,0,0,0.1);
+}
+
 .metric-card h4 {
-    color: #333;
-    margin-bottom: 0.5rem;
+  color: #004aad;
+  text-align: center;
+  font-size: 1.1rem;
+  margin-bottom: 0.7rem;
 }
 
-/* Individual Metric Item */
-.metric-item {
-    margin: 0.3rem 0;
-    color: #222;
+/* === Expander Styling (for filings & news) === */
+.streamlit-expanderHeader {
+  background-color: #e0e7ff !important;
+  color: #111 !important;
+  border-radius: 6px !important;
+  font-weight: 500 !important;
 }
 
-/* Recommendation Cards */
-.recommend-card {
-    background: #ffffff;
-    border: 1px solid #ccc;
-    border-radius: 12px;
-    padding: 1rem;
-    margin: 0.5rem;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-}
-
-/* Fade-in animation for results */
+/* === Fade-in animation for results === */
 .fade-in-results {
-    animation: fadeIn 0.8s ease-in;
+  animation: fadeIn 0.7s ease-in-out;
 }
+
 @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
 }
