@@ -4,6 +4,7 @@ from datetime import datetime, timezone, timedelta
 from supabase_client import supabase
 from scripts.analysis_module import analyze_ticker
 from scripts.euronews_module import push_news
+from scripts.finbert_module import run_finbert_analysis  # ✅ NEW IMPORT
 
 # --- Page Config ---
 st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
@@ -14,7 +15,9 @@ with open("assets/frontend_style.css") as f:
     st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # --- Load companies for autofill ---
-companies_resp = supabase.table("companies").select("id, ticker, company_name, sector, industry, currency, country").execute()
+companies_resp = supabase.table("companies").select(
+    "id, ticker, company_name, sector, industry, currency, country"
+).execute()
 companies = companies_resp.data or []
 company_names = [c["company_name"] for c in companies if c.get("company_name")]
 tickers = [c["ticker"] for c in companies if c.get("ticker")]
@@ -30,11 +33,15 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # Autofill logic
 if company_input and not ticker_input:
-    match = next((c["ticker"] for c in companies if c["company_name"].lower() == company_input.lower()), "")
+    match = next(
+        (c["ticker"] for c in companies if c["company_name"].lower() == company_input.lower()), ""
+    )
     if match:
         ticker_input = match
 elif ticker_input and not company_input:
-    match = next((c["company_name"] for c in companies if c["ticker"].lower() == ticker_input.lower()), "")
+    match = next(
+        (c["company_name"] for c in companies if c["ticker"].lower() == ticker_input.lower()), ""
+    )
     if match:
         company_input = match
 
@@ -81,7 +88,14 @@ def display_dict_pretty(data_dict):
 
 def recent_record_exists(table, ticker):
     try:
-        res = supabase.table(table).select("run_timestamp").ilike("ticker", ticker).order("run_timestamp", desc=True).limit(1).execute()
+        res = (
+            supabase.table(table)
+            .select("run_timestamp")
+            .ilike("ticker", ticker)
+            .order("run_timestamp", desc=True)
+            .limit(1)
+            .execute()
+        )
         if not res.data:
             return False
         last_ts = datetime.fromisoformat(res.data[0]["run_timestamp"].replace("Z", "+00:00"))
@@ -113,13 +127,18 @@ if fetch_triggered and company_input:
 
         companies_data = []
         if ticker:
-            companies_data = supabase.table("companies").select("*").ilike("ticker", ticker).execute().data or []
+            companies_data = (
+                supabase.table("companies").select("*").ilike("ticker", ticker).execute().data or []
+            )
         elif company_name:
-            companies_data = supabase.table("companies").select("*").ilike("company_name", company_name).execute().data or []
+            companies_data = (
+                supabase.table("companies").select("*").ilike("company_name", company_name).execute().data or []
+            )
 
         if companies_data:
             comp = companies_data[0]
-            st.markdown(f"""
+            st.markdown(
+                f"""
             <div class='company-card'>
                 <h4>{comp.get('company_name', 'N/A')}</h4>
                 <p><b>Ticker:</b> {comp.get('ticker', 'N/A')}</p>
@@ -128,7 +147,9 @@ if fetch_triggered and company_input:
                 <p><b>Country:</b> {comp.get('country', 'N/A')}</p>
                 <p><b>Exchange:</b> {comp.get('exchange', 'N/A')}</p>
             </div>
-            """, unsafe_allow_html=True)
+            """,
+                unsafe_allow_html=True,
+            )
         else:
             st.caption(f"No company data found for '{company_name or ticker}'.")
         selected_metrics = [m for m in selected_metrics if m != "companies"]
@@ -197,6 +218,29 @@ if fetch_triggered and company_input:
                 st.markdown(f"**Published Date:** {item.get('published','N/A')}")
     else:
         st.info("No recent news found.")
+
+    # ✅ ---- FINBERT ANALYSIS SECTION ----
+    if st.button("🤖 Run Analysis"):
+        st.subheader("🧠 FinBERT Fundamental Analysis")
+
+        analysis_text = ""
+        for metric in selected_metrics:
+            rows = get_table_rows(metric, company_id, ticker)
+            if not rows:
+                continue
+            row = rows[0]
+            summary = ", ".join(
+                [f"{k}: {v}" for k, v in row.items() if k not in ("id", "company_id", "created_at", "updated_at")]
+            )
+            analysis_text += f"\n[{metric.title()}] {summary}"
+
+        if analysis_text.strip():
+            with st.spinner("Analyzing fundamentals with FinBERT..."):
+                result = run_finbert_analysis(analysis_text)
+            st.markdown(result)
+            st.caption("_Note: This analysis references the selected metrics and is not financial advice._")
+        else:
+            st.warning("No metric data available to analyze.")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
