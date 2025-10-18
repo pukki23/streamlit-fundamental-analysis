@@ -246,3 +246,62 @@ if fetch_triggered and company_input:
 
 else:
     st.info("Enter a company name and click **Fetch Insights** to display information.")
+
+# ---- FUNDAMENTAL ANALYSIS SECTION ----
+st.markdown("---")
+st.subheader("🤖 Fundamental Analysis (AI-Powered)")
+
+# Preserve context with session_state
+if "analysis_result" not in st.session_state:
+    st.session_state.analysis_result = None
+
+if ticker_input and selected_metrics:
+    if st.button("🧠 Run Analysis", use_container_width=True):
+        import requests
+        import json
+
+        st.info("Running AI analysis... Please wait ⏳")
+
+        # Collect metric data for the model
+        collected_data = {}
+        for metric in selected_metrics:
+            rows = get_table_rows(metric, company_id, ticker_input)
+            if rows:
+                collected_data[metric] = rows[0]
+
+        prompt = f"""
+        Perform a concise but insightful fundamental analysis for the company '{company_input}' (Ticker: {ticker_input}).
+        Use ONLY the following metrics data as reference:
+
+        {json.dumps(collected_data, indent=2)}
+
+        Write in a professional, analytical tone. Conclude with a suggested confidence score (0-100%) and 
+        include a clear disclaimer that this is not financial advice.
+        """
+
+        # Send request to Hugging Face FinBERT or financial LLM
+        headers = {
+            "Authorization": f"Bearer {st.secrets['HUGGINGFACE_TOKEN']}"
+        }
+
+        api_url = "https://api-inference.huggingface.co/models/ProsusAI/finbert"
+
+        response = requests.post(api_url, headers=headers, json={"inputs": prompt})
+
+        if response.status_code == 200:
+            try:
+                result = response.json()
+                if isinstance(result, list):
+                    text_output = result[0].get("generated_text", "")
+                else:
+                    text_output = str(result)
+                st.session_state.analysis_result = text_output
+            except Exception as e:
+                st.error(f"Error parsing model output: {e}")
+        else:
+            st.error(f"Model API error: {response.status_code} - {response.text}")
+
+# Display the saved analysis result
+if st.session_state.analysis_result:
+    st.markdown("### 📈 AI Analysis Result")
+    st.markdown(st.session_state.analysis_result)
