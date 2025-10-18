@@ -4,7 +4,8 @@ from datetime import datetime, timezone, timedelta
 from supabase_client import supabase
 from scripts.analysis_module import analyze_ticker
 from scripts.euronews_module import push_news
-from scripts.finbert_module import run_finbert_analysis  # ✅ NEW IMPORT
+import requests
+import json
 
 # --- Page Config ---
 st.set_page_config(page_title="🧭 Company Insights Viewer", layout="wide")
@@ -33,15 +34,11 @@ st.markdown('</div>', unsafe_allow_html=True)
 
 # Autofill logic
 if company_input and not ticker_input:
-    match = next(
-        (c["ticker"] for c in companies if c["company_name"].lower() == company_input.lower()), ""
-    )
+    match = next((c["ticker"] for c in companies if c["company_name"].lower() == company_input.lower()), "")
     if match:
         ticker_input = match
 elif ticker_input and not company_input:
-    match = next(
-        (c["company_name"] for c in companies if c["ticker"].lower() == ticker_input.lower()), ""
-    )
+    match = next((c["company_name"] for c in companies if c["ticker"].lower() == ticker_input.lower()), "")
     if match:
         company_input = match
 
@@ -124,17 +121,9 @@ if fetch_triggered and company_input:
     # ---- COMPANY CARD ----
     if "companies" in selected_metrics:
         st.subheader("🏢 Company Overview")
-
-        companies_data = []
-        if ticker:
-            companies_data = (
-                supabase.table("companies").select("*").ilike("ticker", ticker).execute().data or []
-            )
-        elif company_name:
-            companies_data = (
-                supabase.table("companies").select("*").ilike("company_name", company_name).execute().data or []
-            )
-
+        companies_data = (
+            supabase.table("companies").select("*").ilike("ticker", ticker).execute().data or []
+        )
         if companies_data:
             comp = companies_data[0]
             st.markdown(
@@ -219,89 +208,61 @@ if fetch_triggered and company_input:
     else:
         st.info("No recent news found.")
 
-    # ✅ ---- FINBERT ANALYSIS SECTION ----
-    if st.button("🤖 Run Analysis"):
-        st.subheader("🧠 FinBERT Fundamental Analysis")
+    # ---- FUNDAMENTAL ANALYSIS (LLAMA 3) ----
+    st.markdown("---")
+    st.subheader("🤖 Fundamental Analysis (Llama 3)")
 
-        analysis_text = ""
+    if "analysis_result" not in st.session_state:
+        st.session_state.analysis_result = None
+
+    if st.button("🧠 Run AI Analysis", use_container_width=True):
+        st.info("Running Llama-3 fundamental analysis... ⏳")
+
+        company_record = get_company_record(ticker)
+        company_id = company_record["id"] if company_record else None
+
+        collected_data = {}
         for metric in selected_metrics:
             rows = get_table_rows(metric, company_id, ticker)
-            if not rows:
-                continue
-            row = rows[0]
-            summary = ", ".join(
-                [f"{k}: {v}" for k, v in row.items() if k not in ("id", "company_id", "created_at", "updated_at")]
-            )
-            analysis_text += f"\n[{metric.title()}] {summary}"
+            if rows:
+                collected_data[metric] = rows[0]
 
-        if analysis_text.strip():
-            with st.spinner("Analyzing fundamentals with FinBERT..."):
-                result = run_finbert_analysis(analysis_text)
-            st.markdown(result)
-            st.caption("_Note: This analysis references the selected metrics and is not financial advice._")
-        else:
-            st.warning("No metric data available to analyze.")
+        prompt = f"""
+        You are a financial analyst AI. Using ONLY the following company data for '{company_input}' ({ticker}),
+        write a concise but insightful fundamental analysis.
+
+        Metrics Data:
+        {json.dumps(collected_data, indent=2)}
+
+        Provide your reasoning clearly and analytically. 
+        Conclude with a suggested confidence score (0–100%) 
+        and include the disclaimer: "This is not financial advice."
+        """
+
+        headers = {"Authorization": f"Bearer {st.secrets['HUGGINGFACE_TOKEN']}"}
+        api_url = "https://api-inference.huggingface.co/models/meta-llama/Llama-3-8b-Instruct"
+
+        try:
+            response = requests.post(api_url, headers=headers, json={"inputs": prompt}, timeout=120)
+            if response.status_code == 200:
+                result = response.json()
+                text_output = ""
+                if isinstance(result, list) and "generated_text" in result[0]:
+                    text_output = result[0]["generated_text"]
+                else:
+                    text_output = str(result)
+                st.session_state.analysis_result = text_output
+            else:
+                st.error(f"Model API error: {response.status_code} - {response.text}")
+        except Exception as e:
+            st.error(f"Request failed: {e}")
+
+    if st.session_state.analysis_result:
+        st.markdown("### 📈 AI Analysis Result")
+        st.markdown(st.session_state.analysis_result)
+        st.caption("_This analysis references only selected metrics and is not financial advice._")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
 else:
     st.info("Enter a company name and click **Fetch Insights** to display information.")
-
-# ---- FUNDAMENTAL ANALYSIS SECTION ----
-st.markdown("---")
-st.subheader("🤖 Fundamental Analysis (AI-Powered)")
-
-# Preserve context with session_state
-if "analysis_result" not in st.session_state:
-    st.session_state.analysis_result = None
-
-if ticker_input and selected_metrics:
-    if st.button("🧠 Run Analysis", use_container_width=True):
-        import requests
-        import json
-
-        st.info("Running AI analysis... Please wait ⏳")
-
-        # Collect metric data for the model
-        collected_data = {}
-        for metric in selected_metrics:
-            rows = get_table_rows(metric, company_id, ticker_input)
-            if rows:
-                collected_data[metric] = rows[0]
-
-        prompt = f"""
-        Perform a concise but insightful fundamental analysis for the company '{company_input}' (Ticker: {ticker_input}).
-        Use ONLY the following metrics data as reference:
-
-        {json.dumps(collected_data, indent=2)}
-
-        Write in a professional, analytical tone. Conclude with a suggested confidence score (0-100%) and 
-        include a clear disclaimer that this is not financial advice.
-        """
-
-        # Send request to Hugging Face FinBERT or financial LLM
-        headers = {
-            "Authorization": f"Bearer {st.secrets['HUGGINGFACE_TOKEN']}"
-        }
-
-        api_url = "https://api-inference.huggingface.co/models/ProsusAI/finbert"
-
-        response = requests.post(api_url, headers=headers, json={"inputs": prompt})
-
-        if response.status_code == 200:
-            try:
-                result = response.json()
-                if isinstance(result, list):
-                    text_output = result[0].get("generated_text", "")
-                else:
-                    text_output = str(result)
-                st.session_state.analysis_result = text_output
-            except Exception as e:
-                st.error(f"Error parsing model output: {e}")
-        else:
-            st.error(f"Model API error: {response.status_code} - {response.text}")
-
-# Display the saved analysis result
-if st.session_state.analysis_result:
-    st.markdown("### 📈 AI Analysis Result")
-    st.markdown(st.session_state.analysis_result)
