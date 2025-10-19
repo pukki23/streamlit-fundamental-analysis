@@ -56,7 +56,6 @@ fetch_button_sidebar = st.sidebar.button("📡 Fetch Insights")
 fetch_button_main = st.button("📡 Fetch Insights", key="main_fetch", use_container_width=True)
 fetch_triggered = fetch_button_sidebar or fetch_button_main
 
-
 # -------- Helper Functions --------
 def get_company_record(ticker):
     if not ticker:
@@ -220,10 +219,18 @@ if fetch_triggered and company_input:
         st.info("No recent news found.")
 
     # ✅ ---- FINBERT ANALYSIS SECTION ----
-    if st.button("🤖 Run Analysis"):
-        st.subheader("🧠 FinBERT Fundamental Analysis")
+    st.markdown("---")
+    st.subheader("🤖 Run FinBERT Fundamental Analysis")
 
+    if "analysis_result" not in st.session_state:
+        st.session_state.analysis_result = None
+
+    run_analysis_clicked = st.button("🧠 Run Analysis")
+
+    if run_analysis_clicked:
+        st.session_state.analysis_result = None  # reset before run
         analysis_text = ""
+
         for metric in selected_metrics:
             rows = get_table_rows(metric, company_id, ticker)
             if not rows:
@@ -235,12 +242,16 @@ if fetch_triggered and company_input:
             analysis_text += f"\n[{metric.title()}] {summary}"
 
         if analysis_text.strip():
-            with st.spinner("Analyzing fundamentals with FinBERT..."):
+            with st.spinner("🔍 Analyzing fundamentals with FinBERT..."):
                 result = run_finbert_analysis(analysis_text)
-            st.markdown(result)
-            st.caption("_Note: This analysis references the selected metrics and is not financial advice._")
+            st.session_state.analysis_result = result
         else:
             st.warning("No metric data available to analyze.")
+
+    if st.session_state.analysis_result:
+        st.markdown("### 🧠 FinBERT Analysis Result")
+        st.markdown(st.session_state.analysis_result)
+        st.caption("_Note: This analysis references the selected metrics and is not financial advice._")
 
     st.markdown("</div>", unsafe_allow_html=True)
 
