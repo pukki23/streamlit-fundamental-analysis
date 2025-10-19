@@ -1,8 +1,8 @@
 import streamlit as st
-from supabase import create_client
 import requests, json
 from datetime import datetime
 from supabase_client import supabase
+from scripts.analysis_module import analyze_ticker  # ✅ triggers the data refresh
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="🤖 LLM Analysis", layout="wide")
@@ -45,9 +45,7 @@ def run_finbert_analysis(ticker, collected_data):
     """
 
     with st.spinner("Running FinBERT analysis... please wait..."):
-        response = requests.post(
-            model_url, headers=headers, json={"inputs": prompt}, timeout=180
-        )
+        response = requests.post(model_url, headers=headers, json={"inputs": prompt}, timeout=180)
 
     if response.status_code == 200:
         try:
@@ -63,8 +61,12 @@ def run_finbert_analysis(ticker, collected_data):
 
 # ---------------- SECTION: HISTORY ----------------
 st.subheader("📜 Recent Analyses")
-history_resp = supabase.table("llm_analysis").select("*").order("created_at", desc=True).limit(10).execute()
-history = history_resp.data or []
+
+if "analysis_history" not in st.session_state:
+    history_resp = supabase.table("llm_analysis").select("*").order("created_at", desc=True).limit(10).execute()
+    st.session_state.analysis_history = history_resp.data or []
+
+history = st.session_state.analysis_history
 
 if history:
     selected_analysis = st.selectbox(
@@ -72,7 +74,10 @@ if history:
         options=["(None)"] + [f"{h['ticker']} — {h['created_at'][:19]}" for h in history]
     )
     if selected_analysis != "(None)":
-        chosen = next((h for h in history if f"{h['ticker']} — {h['created_at'][:19]}" == selected_analysis), None)
+        chosen = next(
+            (h for h in history if f"{h['ticker']} — {h['created_at'][:19]}" == selected_analysis),
+            None,
+        )
         if chosen:
             st.markdown(f"### 📈 {chosen['ticker']}")
             st.markdown(chosen["analysis_result"])
@@ -91,19 +96,30 @@ if run_button:
     if not ticker:
         st.error("Please enter a valid ticker.")
     else:
+        with st.spinner("🔄 Refreshing fundamental data..."):
+            analyze_ticker(ticker, [
+                "valuation", "profitability", "growth", "balance",
+                "cashflow", "dividends", "recommendations"
+            ])
+
         metric_data = fetch_metric_data(ticker)
         if not metric_data:
             st.warning(f"No metrics found for ticker '{ticker}' in Supabase.")
         else:
             result = run_finbert_analysis(ticker, metric_data)
+
             st.subheader("📊 AI Fundamental Analysis Result")
             st.markdown(result)
             st.caption("_Note: This analysis references the selected metrics and is not financial advice._")
 
             # Save to database
-            supabase.table("llm_analysis").insert({
+            entry = {
                 "ticker": ticker,
                 "analysis_result": result,
                 "created_at": datetime.utcnow().isoformat()
-            }).execute()
-            st.success("✅ Analysis saved successfully.")
+            }
+            supabase.table("llm_analysis").insert(entry).execute()
+
+            # Add new result to session history dynamically
+            st.session_state.analysis_history.insert(0, entry)
+            st.success("✅ Analysis saved and added to history.")
