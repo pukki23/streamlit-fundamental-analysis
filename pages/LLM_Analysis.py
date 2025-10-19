@@ -2,11 +2,7 @@ import streamlit as st
 from supabase import create_client
 import requests, json
 from datetime import datetime
-
-# ---------------- SUPABASE CLIENT ----------------
-url = st.secrets["SUPABASE_URL"]
-key = st.secrets["SUPABASE_KEY"]
-supabase = create_client(url, key)
+from supabase_client import supabase
 
 # ---------------- PAGE CONFIG ----------------
 st.set_page_config(page_title="🤖 LLM Analysis", layout="wide")
