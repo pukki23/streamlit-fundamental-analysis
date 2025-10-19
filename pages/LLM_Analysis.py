@@ -29,7 +29,7 @@ def fetch_metric_data(ticker):
 
 # ---------------- HELPER: CALL HUGGINGFACE MODEL ----------------
 def run_finbert_analysis(ticker, collected_data):
-    hf_token = st.secrets["HF_TOKEN"]
+    hf_token = st.secrets["HUGGINGFACE_API_TOKEN"]
     headers = {"Authorization": f"Bearer {hf_token}"}
     model_url = "https://api-inference.huggingface.co/models/yiyanghkust/finbert-tone"
 
